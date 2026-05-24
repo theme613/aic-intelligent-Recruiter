@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/PillButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,9 @@ export type JobFormData = {
   experienceLevel: string;
   jobDescription: string;
 };
+
+const fieldClass =
+  "rounded-none border-black bg-white text-black placeholder:text-black/40 focus-visible:border-black focus-visible:ring-black/20";
 
 type Props = {
   data: JobFormData;
@@ -31,45 +34,53 @@ export function JobForm({ data, onChange, onNext }: Props) {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="jobTitle">Job Title</Label>
+          <Label htmlFor="jobTitle" className="text-xs tracking-[0.15em]">
+            JOB TITLE
+          </Label>
           <Input
             id="jobTitle"
             placeholder="e.g. Frontend Developer"
             value={data.jobTitle}
             onChange={(e) => update({ jobTitle: e.target.value })}
-            className="border-gray-800 bg-gray-950"
+            className={fieldClass}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="company">Company Name</Label>
+          <Label htmlFor="company" className="text-xs tracking-[0.15em]">
+            COMPANY
+          </Label>
           <Input
             id="company"
             placeholder="e.g. APU AIC Labs"
             value={data.company}
             onChange={(e) => update({ company: e.target.value })}
-            className="border-gray-800 bg-gray-950"
+            className={fieldClass}
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="skills">Required Skills (comma separated)</Label>
+        <Label htmlFor="skills" className="text-xs tracking-[0.15em]">
+          REQUIRED SKILLS
+        </Label>
         <Input
           id="skills"
           placeholder="React, TypeScript, Next.js"
           value={data.requiredSkills}
           onChange={(e) => update({ requiredSkills: e.target.value })}
-          className="border-gray-800 bg-gray-950"
+          className={fieldClass}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="experience">Experience Level</Label>
+        <Label htmlFor="experience" className="text-xs tracking-[0.15em]">
+          EXPERIENCE LEVEL
+        </Label>
         <select
           id="experience"
           value={data.experienceLevel}
           onChange={(e) => update({ experienceLevel: e.target.value })}
-          className="flex h-9 w-full rounded-md border border-gray-800 bg-gray-950 px-3 py-1 text-sm text-white shadow-xs outline-none focus-visible:border-violet-500 focus-visible:ring-[3px] focus-visible:ring-violet-500/30"
+          className="flex h-9 w-full rounded-none border border-black bg-white px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-black/20"
         >
           <option value="Junior">Junior</option>
           <option value="Mid">Mid</option>
@@ -78,23 +89,21 @@ export function JobForm({ data, onChange, onNext }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Job Description</Label>
+        <Label htmlFor="description" className="text-xs tracking-[0.15em]">
+          JOB DESCRIPTION
+        </Label>
         <Textarea
           id="description"
           placeholder="Paste the full job description here..."
           value={data.jobDescription}
           onChange={(e) => update({ jobDescription: e.target.value })}
-          className="min-h-[220px] border-gray-800 bg-gray-950 resize-y"
+          className={`min-h-[220px] resize-y ${fieldClass}`}
         />
       </div>
 
-      <Button
-        onClick={onNext}
-        disabled={!canProceed}
-        className="w-full bg-violet-600 hover:bg-violet-500 sm:w-auto"
-      >
-        Next Step
-      </Button>
+      <PillButton onClick={onNext} disabled={!canProceed}>
+        NEXT STEP
+      </PillButton>
     </div>
   );
 }

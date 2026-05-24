@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { FileUpload, type UploadedCandidate } from "@/components/FileUpload";
 import { JobForm, type JobFormData } from "@/components/JobForm";
+import { PillButton } from "@/components/PillButton";
 import { ResultsPanel } from "@/components/ResultsPanel";
-import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/SiteHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CandidateAnalysis } from "@/lib/gemini";
 import {
@@ -75,7 +75,10 @@ export default function RecruitPage() {
     setLoading(true);
     setError(null);
     setProgress(0);
+    setResults([]);
     setTab("results");
+
+    const total = candidates.length;
 
     try {
       const res = await fetch("/api/analyze", {
@@ -95,17 +98,61 @@ export default function RecruitPage() {
         }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Analysis failed");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(
+          (errData as { error?: string }).error ?? "Analysis failed",
+        );
       }
 
-      setProgress(100);
-      setResults(data.results ?? []);
-      if (data.demo) setDemoMode(true);
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new Error("Streaming not supported in this browser");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let received = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as {
+            type: string;
+            result?: CandidateAnalysis;
+            demo?: boolean;
+            error?: string;
+          };
+
+          if (event.type === "candidate" && event.result) {
+            received += 1;
+            setResults((prev) =>
+              [...prev, event.result!].sort((a, b) => b.score - a.score),
+            );
+            setProgress(
+              total > 0 ? Math.min(95, (received / total) * 100) : 50,
+            );
+          }
+
+          if (event.type === "done") {
+            if (event.demo) setDemoMode(true);
+            setProgress(100);
+          }
+
+          if (event.type === "error") {
+            throw new Error(event.error ?? "Analysis failed");
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
-      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -116,47 +163,54 @@ export default function RecruitPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/" className="text-sm font-semibold text-violet-400">
-            ← AI Recruitment Agent
-          </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-violet-500/40 text-violet-300 hover:bg-violet-500/10"
-            onClick={loadDemoData}
-          >
-            <Sparkles className="mr-2 size-4" />
-            Load Demo Data
-          </Button>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-white text-black">
+      <SiteHeader
+        showLogin={false}
+        rightSlot={
+          <PillButton onClick={loadDemoData} variant="outline" className="!py-2 !text-[10px]">
+            <Sparkles className="mr-1.5 size-3.5" />
+            LOAD DEMO
+          </PillButton>
+        }
+      />
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Recruitment Dashboard
+      <main className="mx-auto w-full max-w-6xl flex-1 border-x border-black">
+        <div className="border-b border-black px-6 py-10 sm:px-10">
+          <p className="text-xs font-medium tracking-[0.25em] text-black/50">
+            DASHBOARD
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            Recruitment workspace
           </h1>
-          <p className="mt-2 text-gray-400">
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-black/70">
             Define the role, upload resumes, and let AI rank your best matches.
           </p>
         </div>
 
-        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 border border-gray-800 bg-gray-900">
-            <TabsTrigger value="job">Job Description</TabsTrigger>
-            <TabsTrigger value="upload" disabled={!jobReady}>
-              Upload Resumes
+        <Tabs value={tab} onValueChange={setTab} className="gap-0">
+          <TabsList className="grid h-auto w-full grid-cols-3 rounded-none border-b border-black bg-white p-0">
+            <TabsTrigger
+              value="job"
+              className="rounded-none border-r border-black py-4 text-xs tracking-[0.15em] data-active:bg-black data-active:text-white"
+            >
+              JOB
             </TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
+            <TabsTrigger
+              value="upload"
+              disabled={!jobReady}
+              className="rounded-none border-r border-black py-4 text-xs tracking-[0.15em] data-active:bg-black data-active:text-white"
+            >
+              UPLOAD
+            </TabsTrigger>
+            <TabsTrigger
+              value="results"
+              className="rounded-none py-4 text-xs tracking-[0.15em] data-active:bg-black data-active:text-white"
+            >
+              RESULTS
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent
-            value="job"
-            className="rounded-xl border border-gray-800 bg-gray-900 p-6"
-          >
+          <TabsContent value="job" className="mt-0 border-0 p-6 sm:p-10">
             <JobForm
               data={job}
               onChange={setJob}
@@ -164,10 +218,7 @@ export default function RecruitPage() {
             />
           </TabsContent>
 
-          <TabsContent
-            value="upload"
-            className="rounded-xl border border-gray-800 bg-gray-900 p-6"
-          >
+          <TabsContent value="upload" className="mt-0 border-0 p-6 sm:p-10">
             <FileUpload
               candidates={candidates}
               onChange={setCandidates}
@@ -177,25 +228,21 @@ export default function RecruitPage() {
             />
           </TabsContent>
 
-          <TabsContent
-            value="results"
-            className="rounded-xl border border-gray-800 bg-gray-900 p-6"
-          >
+          <TabsContent value="results" className="mt-0 border-0 p-6 sm:p-10">
             <ResultsPanel
               results={results}
               loading={loading}
               progress={progress}
               error={error}
               demoMode={demoMode}
+              totalCandidates={candidates.length}
             />
           </TabsContent>
         </Tabs>
       </main>
 
-      <footer className="border-t border-gray-800 py-6 text-center">
-        <span className="inline-flex items-center rounded-full border border-gray-800 bg-gray-900 px-3 py-1 text-xs text-gray-500">
-          Powered by Google Gemini
-        </span>
+      <footer className="border-t border-black py-5 text-center text-xs tracking-widest text-black/50">
+        POWERED BY GOOGLE GEMINI
       </footer>
     </div>
   );

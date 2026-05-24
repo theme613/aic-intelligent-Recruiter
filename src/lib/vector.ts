@@ -1,11 +1,54 @@
 /**
- * Local bag-of-words cosine similarity for semantic-style ranking without embeddings.
+ * Semantic keyword expansion + bag-of-words cosine similarity (0–1).
  */
+
+const SKILL_SYNONYMS: Record<string, string[]> = {
+  "machine learning": [
+    "ml",
+    "neural nets",
+    "deep learning",
+    "tensorflow",
+    "pytorch",
+    "sklearn",
+  ],
+  backend: [
+    "node.js",
+    "express",
+    "fastapi",
+    "django",
+    "microservices",
+    "rest api",
+  ],
+  frontend: ["react", "vue", "next.js", "typescript", "tailwind"],
+  devops: [
+    "docker",
+    "kubernetes",
+    "ci/cd",
+    "github actions",
+    "terraform",
+  ],
+  data: ["sql", "pandas", "spark", "etl", "data pipeline", "analytics"],
+};
+
+function expandWithSynonyms(text: string): string {
+  const lower = text.toLowerCase();
+  const additions: string[] = [];
+
+  for (const [canonical, synonyms] of Object.entries(SKILL_SYNONYMS)) {
+    const terms = [canonical, ...synonyms];
+    const matched = terms.some((term) => lower.includes(term));
+    if (matched) {
+      additions.push(canonical, ...synonyms);
+    }
+  }
+
+  return additions.length ? `${text} ${additions.join(" ")}` : text;
+}
 
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9+#.\s-]/g, " ")
+    .replace(/[^a-z0-9+#.\s-/]/g, " ")
     .split(/\s+/)
     .filter((t) => t.length > 2);
 }
@@ -38,15 +81,20 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-/** Returns similarity score 0–1 between job text and resume text. */
+/** Returns normalized semantic similarity score 0–1 between job text and resume text. */
 export function cosineSimilarityScore(
   jobText: string,
   resumeText: string,
 ): number {
-  const jobTokens = tokenize(jobText);
-  const resumeTokens = tokenize(resumeText);
+  const expandedJob = expandWithSynonyms(jobText);
+  const expandedResume = expandWithSynonyms(resumeText);
+
+  const jobTokens = tokenize(expandedJob);
+  const resumeTokens = tokenize(expandedResume);
   const vocab = [...new Set([...jobTokens, ...resumeTokens])];
   const jobVec = vectorFromTf(termFrequency(jobTokens), vocab);
   const resumeVec = vectorFromTf(termFrequency(resumeTokens), vocab);
-  return cosineSimilarity(jobVec, resumeVec);
+
+  const raw = cosineSimilarity(jobVec, resumeVec);
+  return Math.min(1, Math.max(0, raw));
 }
