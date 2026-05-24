@@ -8,7 +8,7 @@ import { JobForm, type JobFormData } from "@/components/JobForm";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { CandidateAnalysis } from "@/lib/chutes";
+import type { CandidateAnalysis } from "@/lib/gemini";
 import {
   demoCandidates,
   demoJob,
@@ -194,7 +194,7 @@ export default function RecruitPage() {
 
       <footer className="border-t border-gray-800 py-6 text-center">
         <span className="inline-flex items-center rounded-full border border-gray-800 bg-gray-900 px-3 py-1 text-xs text-gray-500">
-          Powered by Chutes.AI
+          Powered by Google Gemini
         </span>
       </footer>
     </div>

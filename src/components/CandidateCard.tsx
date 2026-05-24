@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { CandidateAnalysis } from "@/lib/chutes";
+import type { CandidateAnalysis } from "@/lib/gemini";
 import { cn } from "@/lib/utils";
 
 function scoreBadgeClass(score: number): string {

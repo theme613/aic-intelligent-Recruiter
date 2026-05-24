@@ -1,4 +1,4 @@
-import type { CandidateAnalysis } from "@/lib/chutes";
+import type { CandidateAnalysis } from "@/lib/gemini";
 
 export const demoJob = {
   jobTitle: "Frontend Developer",

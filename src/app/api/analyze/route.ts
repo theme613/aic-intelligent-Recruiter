@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import {
   analyzeCandidate,
-  hasChutesApiKey,
+  hasGeminiApiKey,
   type CandidateAnalysis,
-} from "@/lib/chutes";
+} from "@/lib/gemini";
 import { demoMockResults } from "@/lib/demoData";
 import { cosineSimilarityScore } from "@/lib/vector";
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const useDemo = demoMode || !hasChutesApiKey();
+    const useDemo = demoMode || !hasGeminiApiKey();
 
     if (useDemo) {
       const results = candidates
@@ -80,11 +80,11 @@ export async function POST(request: Request) {
           name: analysis.name || candidate.name || "Unknown Candidate",
         });
       } catch (err) {
-        console.error("Chutes.AI analysis failed for candidate:", candidate.name, err);
+        console.error("Gemini analysis failed for candidate:", candidate.name, err);
         return NextResponse.json(
           {
             error:
-              "AI analysis failed. Check your CHUTES_API_KEY or use Load Demo Data for offline demo.",
+              "AI analysis failed. Check your GEMINI_API_KEY or use Load Demo Data for offline demo.",
           },
           { status: 502 },
         );

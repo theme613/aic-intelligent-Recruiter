@@ -5,7 +5,7 @@ import { CandidateCard } from "@/components/CandidateCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import type { CandidateAnalysis } from "@/lib/chutes";
+import type { CandidateAnalysis } from "@/lib/gemini";
 
 type Props = {
   results: CandidateAnalysis[];
@@ -83,7 +83,7 @@ export function ResultsPanel({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="border-gray-700 text-gray-400">
-            Powered by Chutes.AI
+            Powered by Google Gemini
           </Badge>
           <Button
             variant="outline"

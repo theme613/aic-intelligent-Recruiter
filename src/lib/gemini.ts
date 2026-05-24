@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export type CandidateAnalysis = {
   name: string;
@@ -11,19 +11,27 @@ export type CandidateAnalysis = {
   summary: string;
 };
 
-function getChutesClient(): OpenAI {
-  const apiKey = process.env.CHUTES_API_KEY?.trim();
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+function getGeminiModel() {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("CHUTES_API_KEY is not configured");
+    throw new Error("GEMINI_API_KEY is not configured");
   }
-  return new OpenAI({
-    apiKey,
-    baseURL: "https://llm.chutes.ai/v1",
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({
+    model: GEMINI_MODEL,
+    systemInstruction:
+      "You are an expert technical recruiter with 10 years of experience. Analyze the candidate resume against the job description and return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.",
+    generationConfig: {
+      maxOutputTokens: 1000,
+      responseMimeType: "application/json",
+    },
   });
 }
 
-export function hasChutesApiKey(): boolean {
-  return Boolean(process.env.CHUTES_API_KEY?.trim());
+export function hasGeminiApiKey(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
 
 export function parseAnalysisJson(raw: string): CandidateAnalysis {
@@ -46,19 +54,9 @@ export async function analyzeCandidate({
   jobDescription: string;
   resumeText: string;
 }): Promise<CandidateAnalysis> {
-  const chutes = getChutesClient();
-  const response = await chutes.chat.completions.create({
-    model: "deepseek-ai/DeepSeek-V3-0324",
-    max_tokens: 1000,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an expert technical recruiter with 10 years of experience. Analyze the candidate resume against the job description and return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.",
-      },
-      {
-        role: "user",
-        content: `Job Title: ${jobTitle}
+  const model = getGeminiModel();
+
+  const prompt = `Job Title: ${jobTitle}
 Company: ${company}
 Required Skills: ${requiredSkills.join(", ")}
 Experience Level: ${experienceLevel}
@@ -77,11 +75,9 @@ Return this exact JSON structure:
   "skillsGap": "1 sentence describing what the candidate needs to improve",
   "outreachMessage": "personalized LinkedIn/email outreach message from recruiter to candidate",
   "summary": "one line summary of the candidate profile"
-}`,
-      },
-    ],
-  });
+}`;
 
-  const raw = response.choices[0]?.message?.content ?? "";
+  const result = await model.generateContent(prompt);
+  const raw = result.response.text();
   return parseAnalysisJson(raw);
 }

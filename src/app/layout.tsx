@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AI Recruitment Agent | APU AIC",
   description:
-    "Intelligent recruitment agent that semantically ranks candidates and generates personalized outreach using Chutes.AI",
+    "Intelligent recruitment agent that semantically ranks candidates and generates personalized outreach using Google Gemini",
 };
 
 export default function RootLayout({
