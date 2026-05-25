@@ -6,6 +6,7 @@ import mammoth from "mammoth";
 import { PillButton } from "@/components/PillButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { parseApiJson } from "@/lib/api-response";
 import { cn } from "@/lib/utils";
 
 export type UploadedCandidate = {
@@ -69,9 +70,19 @@ export function FileUpload({
             method: "POST",
             body: formData,
           });
-          const data = await res.json();
+          const data = await parseApiJson<{
+            text?: string;
+            filename?: string;
+            error?: string;
+          }>(res);
           if (!res.ok) throw new Error(data.error ?? "PDF parse failed");
-          const name = extractNameFromText(data.text, file.name.replace(/\.[^.]+$/, ""));
+          if (!data.text?.trim()) {
+            throw new Error("PDF parsed but no text was extracted.");
+          }
+          const name = extractNameFromText(
+            data.text,
+            file.name.replace(/\.[^.]+$/, ""),
+          );
           addCandidate(name, data.text, data.filename);
         } else if (ext === "txt") {
           const text = await file.text();

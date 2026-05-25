@@ -8,6 +8,8 @@ import {
 import { runAgent } from "@/lib/agent/orchestrator";
 import type { AgentEvent } from "@/lib/agent/types";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 type AnalyzeRequest = {
@@ -22,6 +24,12 @@ type AnalyzeRequest = {
 
 function encodeEvent(encoder: TextEncoder, event: AgentEvent): Uint8Array {
   return encoder.encode(`${JSON.stringify(event)}\n`);
+}
+
+/** Shorter pauses on Vercel so demo mode stays under Hobby's ~10s function limit. */
+function demoDelay(ms: number): Promise<void> {
+  const scaled = process.env.VERCEL ? Math.min(ms, 100) : ms;
+  return new Promise((r) => setTimeout(r, scaled));
 }
 
 export async function POST(request: Request) {
@@ -76,27 +84,27 @@ export async function POST(request: Request) {
               message: "Demo mode: streaming Hidden Gem pipeline (no Gemini calls)",
             });
             emit({ type: "job_requirements", data: demoJobRequirements });
-            await new Promise((r) => setTimeout(r, 200));
+            await demoDelay(200);
             emit({
               type: "log",
               message: `Step 1 complete: extracted ${demoJobRequirements.hard_skills.length} hard skills, ${demoJobRequirements.hard_constraints.length} constraints`,
             });
-            await new Promise((r) => setTimeout(r, 200));
+            await demoDelay(200);
             emit({
               type: "log",
               message: `Step 2 complete: parsed ${candidates.length} candidates, ${Math.max(1, titleMismatches)} have title mismatch`,
             });
-            await new Promise((r) => setTimeout(r, 200));
+            await demoDelay(200);
             emit({
               type: "log",
               message: `Step 3 complete: ${candidates.length} candidates ranked, ${hasJordan ? 1 : 0} flagged as potential hidden gems`,
             });
-            await new Promise((r) => setTimeout(r, 200));
+            await demoDelay(200);
             emit({
               type: "log",
               message: `Step 4 complete: reranked with rules, 2 flags applied`,
             });
-            await new Promise((r) => setTimeout(r, 300));
+            await demoDelay(300);
             const promoted = hasJordan ? [DEMO_HIDDEN_GEM_NAME] : [];
             emit({
               type: "hidden_gems",
@@ -107,7 +115,7 @@ export async function POST(request: Request) {
               type: "log",
               message: `Step 5 complete: reflection promoted ${promoted.length} hidden gem${promoted.length === 1 ? "" : "s"} into shortlist`,
             });
-            await new Promise((r) => setTimeout(r, 200));
+            await demoDelay(200);
             emit({
               type: "log",
               message: `Step 6 complete: generated pitches for ${candidates.length} candidates`,
@@ -119,7 +127,7 @@ export async function POST(request: Request) {
 
             for (const result of results) {
               emit({ type: "candidate", result });
-              await new Promise((r) => setTimeout(r, 400));
+              await demoDelay(400);
             }
 
             emit({

@@ -11,6 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CandidateAnalysis } from "@/lib/gemini";
 import type { JobRequirements } from "@/lib/agent/types";
 import {
+  assertNdjsonResponse,
+  formatHtmlApiError,
+  parseApiJson,
+  parseNdjsonLine,
+} from "@/lib/api-response";
+import {
   demoCandidates,
   demoJob,
   parseRequiredSkills,
@@ -114,11 +120,13 @@ export default function RecruitPage() {
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(
-          (errData as { error?: string }).error ?? "Analysis failed",
+        const errData = await parseApiJson<{ error?: string }>(res).catch(
+          () => ({ error: formatHtmlApiError(res.status) }),
         );
+        throw new Error(errData.error ?? "Analysis failed");
       }
+
+      assertNdjsonResponse(res);
 
       const reader = res.body?.getReader();
       if (!reader) {
@@ -139,7 +147,7 @@ export default function RecruitPage() {
 
         for (const line of lines) {
           if (!line.trim()) continue;
-          const event = JSON.parse(line) as {
+          const event = parseNdjsonLine<{
             type: string;
             result?: CandidateAnalysis;
             data?: JobRequirements;
@@ -151,7 +159,7 @@ export default function RecruitPage() {
             elapsedSeconds?: number;
             demo?: boolean;
             error?: string;
-          };
+          }>(line);
 
           if (event.type === "log" && event.message) {
             setReasoningLog((prev) => [...prev, event.message!]);
