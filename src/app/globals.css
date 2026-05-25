@@ -60,10 +60,16 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-white text-black antialiased;
-  }
   html {
-    @apply font-sans;
+    @apply font-sans overflow-x-hidden;
+  }
+  body {
+    @apply min-h-full overflow-x-hidden bg-white text-black antialiased;
+  }
+}
+
+@layer utilities {
+  .page-x {
+    @apply px-4 sm:px-6 lg:px-10;
   }
 }

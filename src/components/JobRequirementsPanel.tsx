@@ -6,8 +6,8 @@ type Props = {
 
 export function JobRequirementsPanel({ requirements }: Props) {
   return (
-    <section className="mb-8 border border-black bg-[#f4f4f4]">
-      <div className="border-b border-black px-5 py-3">
+    <section className="mb-8 w-full min-w-0 border border-black bg-[#f4f4f4]">
+      <div className="border-b border-black px-4 py-3 sm:px-5">
         <p className="text-xs font-bold tracking-[0.2em]">
           PARSED JOB REQUIREMENTS
         </p>
@@ -17,8 +17,8 @@ export function JobRequirementsPanel({ requirements }: Props) {
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-2">
-        <div className="border-b border-black p-5 sm:border-b-0 sm:border-r">
+      <div className="grid min-w-0 sm:grid-cols-2">
+        <div className="border-b border-black p-4 sm:border-b-0 sm:border-r sm:p-5">
           <p className="mb-2 text-xs font-bold tracking-[0.15em]">
             MUST-HAVE SKILLS
           </p>
@@ -51,7 +51,7 @@ export function JobRequirementsPanel({ requirements }: Props) {
           )}
         </div>
 
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           <p className="mb-2 text-xs font-bold tracking-[0.15em]">
             RESPONSIBILITIES
           </p>

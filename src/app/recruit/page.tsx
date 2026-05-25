@@ -206,7 +206,7 @@ export default function RecruitPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-black">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-white text-black">
       <SiteHeader
         showLogin={false}
         rightSlot={
@@ -217,8 +217,8 @@ export default function RecruitPage() {
         }
       />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 border-x border-black">
-        <div className="border-b border-black px-6 py-10 sm:px-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 border-x-0 border-black sm:border-x">
+        <div className="page-x border-b border-black py-8 sm:py-10">
           <p className="text-xs font-medium tracking-[0.25em] text-black/50">
             DASHBOARD
           </p>
@@ -230,30 +230,23 @@ export default function RecruitPage() {
           </p>
         </div>
 
-        <Tabs value={tab} onValueChange={setTab} className="gap-0">
-          <TabsList className="grid h-auto w-full grid-cols-3 rounded-none border-b border-black bg-white p-0">
-            <TabsTrigger
-              value="job"
-              className="rounded-none border-r border-black py-4 text-xs tracking-[0.15em] data-active:bg-black data-active:text-white"
-            >
+        <Tabs value={tab} onValueChange={setTab} className="w-full gap-0">
+          <TabsList
+            variant="brutalist"
+            className="!inline-grid w-full grid-cols-3 items-stretch"
+          >
+            <TabsTrigger value="job" className="min-w-0">
               JOB
             </TabsTrigger>
-            <TabsTrigger
-              value="upload"
-              disabled={!jobReady}
-              className="rounded-none border-r border-black py-4 text-xs tracking-[0.15em] data-active:bg-black data-active:text-white"
-            >
+            <TabsTrigger value="upload" disabled={!jobReady} className="min-w-0">
               UPLOAD
             </TabsTrigger>
-            <TabsTrigger
-              value="results"
-              className="rounded-none py-4 text-xs tracking-[0.15em] data-active:bg-black data-active:text-white"
-            >
+            <TabsTrigger value="results" className="min-w-0 border-r-0">
               RESULTS
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="job" className="mt-0 border-0 p-6 sm:p-10">
+          <TabsContent value="job" className="page-x mt-0 border-0 py-6 sm:py-10">
             <JobForm
               data={job}
               onChange={setJob}
@@ -261,7 +254,7 @@ export default function RecruitPage() {
             />
           </TabsContent>
 
-          <TabsContent value="upload" className="mt-0 border-0 p-6 sm:p-10">
+          <TabsContent value="upload" className="page-x mt-0 border-0 py-6 sm:py-10">
             <FileUpload
               candidates={candidates}
               onChange={setCandidates}
@@ -271,7 +264,7 @@ export default function RecruitPage() {
             />
           </TabsContent>
 
-          <TabsContent value="results" className="mt-0 border-0 p-6 sm:p-10">
+          <TabsContent value="results" className="page-x mt-0 border-0 py-6 sm:py-10">
             <ResultsPanel
               results={results}
               jobRequirements={jobRequirements}
@@ -288,7 +281,7 @@ export default function RecruitPage() {
         </Tabs>
       </main>
 
-      <footer className="border-t border-black py-5 text-center text-xs tracking-widest text-black/50">
+      <footer className="mx-auto w-full max-w-6xl border-t border-x-0 border-black px-4 py-5 text-center text-xs tracking-widest text-black/50 sm:border-x">
         POWERED BY GOOGLE GEMINI
       </footer>
     </div>

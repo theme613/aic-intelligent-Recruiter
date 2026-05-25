@@ -14,7 +14,7 @@ export type JobFormData = {
 };
 
 const fieldClass =
-  "rounded-none border-black bg-white text-black placeholder:text-black/40 focus-visible:border-black focus-visible:ring-black/20";
+  "h-10 rounded-none border-black bg-white text-black shadow-none placeholder:text-black/40 focus-visible:border-black focus-visible:ring-1 focus-visible:ring-black/20";
 
 type Props = {
   data: JobFormData;
@@ -80,7 +80,7 @@ export function JobForm({ data, onChange, onNext }: Props) {
           id="experience"
           value={data.experienceLevel}
           onChange={(e) => update({ experienceLevel: e.target.value })}
-          className="flex h-9 w-full rounded-none border border-black bg-white px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+          className="flex h-10 w-full rounded-none border border-black bg-white px-3 text-sm shadow-none outline-none focus-visible:ring-1 focus-visible:ring-black/20"
         >
           <option value="Junior">Junior</option>
           <option value="Mid">Mid</option>

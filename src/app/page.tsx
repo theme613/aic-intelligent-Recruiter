@@ -14,14 +14,14 @@ const avatars = [
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white text-black">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-white text-black">
       <SiteHeader />
 
       <main className="flex flex-1 flex-col">
         {/* Hero grid */}
         <section className="grid flex-1 grid-cols-1 lg:grid-cols-2">
           {/* Left — copy & CTA */}
-          <div className="flex flex-col justify-between border-b border-black p-6 sm:p-10 lg:border-b-0 lg:border-r">
+          <div className="flex flex-col justify-between border-b border-black px-4 py-8 sm:px-6 sm:py-10 lg:border-b-0 lg:border-r lg:px-10">
             <div>
               <Sparkles className="mb-8 size-5 text-black" strokeWidth={1.5} />
 
@@ -107,9 +107,40 @@ export default function HomePage() {
             {
               content: (
                 <div className="flex flex-wrap items-center gap-6 text-sm font-bold tracking-widest text-black/60">
-                  <span>GEMINI</span>
-                  <span>NEXT.JS</span>
-                  <span>VERCEL</span>
+                  {(
+                    [
+                      {
+                        label: "GEMINI",
+                        src: "https://cdn.simpleicons.org/googlegemini",
+                        alt: "Google Gemini",
+                      },
+                      {
+                        label: "NEXT.JS",
+                        src: "https://cdn.simpleicons.org/nextdotjs",
+                        alt: "Next.js",
+                      },
+                      {
+                        label: "VERCEL",
+                        src: "https://cdn.simpleicons.org/vercel",
+                        alt: "Vercel",
+                      },
+                    ] as const
+                  ).map(({ label, src, alt }) => (
+                    <span
+                      key={label}
+                      className="inline-flex items-center gap-2"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={alt}
+                        width={16}
+                        height={16}
+                        className="size-4 shrink-0 brightness-0 dark:invert dark:brightness-100"
+                      />
+                      {label}
+                    </span>
+                  ))}
                 </div>
               ),
               label: "Powered by Google Gemini",

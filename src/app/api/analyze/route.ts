@@ -1,4 +1,5 @@
 import { hasGeminiApiKey } from "@/lib/gemini";
+import { formatGeminiError } from "@/lib/gemini-errors";
 import {
   demoJobRequirements,
   DEMO_HIDDEN_GEM_NAME,
@@ -154,11 +155,7 @@ export async function POST(request: Request) {
           controller.close();
         } catch (err) {
           console.error("Agent pipeline error:", err);
-          emit({
-            type: "error",
-            error:
-              "Agent pipeline failed. Check your GEMINI_API_KEY or use Load Demo Data for offline demo.",
-          });
+          emit({ type: "error", error: formatGeminiError(err) });
           controller.close();
         }
       },

@@ -44,33 +44,35 @@ function StatsBar({
   loading: boolean;
 }) {
   return (
-    <section className="mb-6 grid grid-cols-1 border-2 border-black sm:grid-cols-3">
-      <div className="border-b border-black p-4 sm:border-b-0 sm:border-r">
-        <p className="text-[10px] font-bold tracking-[0.25em] text-black/50">
+    <section className="mb-6 grid w-full min-w-0 grid-cols-2 border border-black sm:grid-cols-3">
+      <div className="min-w-0 border-b border-r border-black p-3 sm:border-b-0 sm:p-4">
+        <p className="text-[9px] font-bold leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.25em]">
           EVALUATED
         </p>
-        <p className="mt-1 text-2xl font-bold">
+        <p className="mt-1 truncate text-xl font-bold sm:text-2xl">
           {loading ? total : analyzed}
           {total > analyzed && !loading ? ` / ${total}` : ""}
         </p>
       </div>
       <div
         className={cn(
-          "border-b border-black p-4 sm:border-b-0 sm:border-r",
+          "min-w-0 border-b border-black p-3 sm:border-b-0 sm:border-r sm:p-4",
           hiddenGems > 0 && "bg-amber-50",
         )}
       >
-        <p className="flex items-center gap-1 text-[10px] font-bold tracking-[0.25em] text-black/50">
-          <Gem className="size-3 text-amber-600" />
-          HIDDEN GEMS FOUND
+        <p className="flex min-w-0 items-start gap-1 text-[9px] font-bold leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.25em]">
+          <Gem className="mt-0.5 size-3 shrink-0 text-amber-600" />
+          <span className="break-words">HIDDEN GEMS</span>
         </p>
-        <p className="mt-1 text-2xl font-bold text-amber-700">{hiddenGems}</p>
+        <p className="mt-1 text-xl font-bold text-amber-700 sm:text-2xl">
+          {hiddenGems}
+        </p>
       </div>
-      <div className="p-4">
-        <p className="text-[10px] font-bold tracking-[0.25em] text-black/50">
+      <div className="col-span-2 min-w-0 border-t border-black p-3 sm:col-span-1 sm:border-t-0 sm:border-r-0 sm:p-4">
+        <p className="text-[9px] font-bold leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.25em]">
           TIME TAKEN
         </p>
-        <p className="mt-1 text-2xl font-bold">
+        <p className="mt-1 text-xl font-bold sm:text-2xl">
           {elapsedSeconds != null ? `${elapsedSeconds}s` : loading ? "…" : "—"}
         </p>
       </div>
@@ -92,22 +94,22 @@ function ReasoningLogPanel({
   if (entries.length === 0 && !running) return null;
 
   return (
-    <section className="mb-8 border border-black">
+    <section className="mb-8 w-full min-w-0 border border-black">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between border-b border-black bg-black px-5 py-3 text-left text-white"
+        className="flex w-full flex-col gap-2 border-b border-black bg-black px-4 py-3 text-left text-white sm:flex-row sm:items-center sm:justify-between sm:px-5"
       >
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.25em]">
+        <div className="min-w-0 pr-8 sm:pr-0">
+          <p className="text-[10px] font-bold tracking-[0.2em]">
             AGENT REASONING LOG
           </p>
-          <p className="mt-0.5 text-xs text-white/60">
+          <p className="mt-0.5 text-xs leading-snug text-white/60">
             7-step pipeline · gemini-2.0-flash → embeddings → gemini-2.5-pro
             (hidden gems) → gemini-2.5-flash-preview
           </p>
         </div>
-        <span className="flex items-center gap-2 text-xs">
+        <span className="flex shrink-0 items-center gap-2 self-end text-xs sm:self-center">
           {running && (
             <>
               <Loader2 className="size-3 animate-spin" />
@@ -122,17 +124,17 @@ function ReasoningLogPanel({
         </span>
       </button>
       {open && (
-        <ol className="max-h-48 divide-y divide-black/10 overflow-y-auto bg-[#f4f4f4] font-mono text-[11px]">
+        <ol className="max-h-48 divide-y divide-black/10 overflow-y-auto overflow-x-hidden bg-[#f4f4f4] font-mono text-[11px]">
           {entries.map((entry, i) => (
-            <li key={i} className="flex gap-3 px-5 py-2">
+            <li key={i} className="flex gap-3 px-4 py-2 sm:px-5">
               <span className="shrink-0 text-black/40">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="text-black/90">{entry}</span>
+              <span className="min-w-0 break-words text-black/90">{entry}</span>
             </li>
           ))}
           {running && entries.length < 7 && (
-            <li className="flex gap-3 px-5 py-2 text-black/50">
+            <li className="flex gap-3 px-4 py-2 text-black/50 sm:px-5">
               <Loader2 className="size-3 shrink-0 animate-spin" />
               <span>Running next step…</span>
             </li>
@@ -211,7 +213,7 @@ export function ResultsPanel({
     return (
       <div className="flex flex-col items-center justify-center space-y-6 py-16">
         <Loader2 className="size-12 animate-spin text-black" />
-        <div className="w-full max-w-md space-y-3 text-center">
+        <div className="w-full max-w-md space-y-3 px-4 text-center">
           <p className="text-lg font-bold tracking-tight">
             Hidden Gem Detector running…
           </p>
@@ -229,7 +231,7 @@ export function ResultsPanel({
 
   if (error && !analyzedCount && reasoningLog.length === 0) {
     return (
-      <div className="border border-[#E63946] bg-[#E63946]/5 p-6 text-center">
+      <div className="border border-[#E63946] bg-[#E63946]/5 px-4 py-6 text-center sm:p-6">
         <p className="text-[#E63946]">{error}</p>
         <p className="mt-2 text-sm text-black/60">
           Try &quot;Load Demo Data&quot; for an offline demo without an API key.
@@ -240,7 +242,7 @@ export function ResultsPanel({
 
   if (!analyzedCount && !loading && reasoningLog.length === 0) {
     return (
-      <div className="border border-black bg-[#f4f4f4] py-16 text-center">
+      <div className="border border-black bg-[#f4f4f4] px-4 py-16 text-center">
         <Sparkles className="mx-auto mb-4 size-10 text-black/30" />
         <p className="text-black/60">
           Upload resumes and run analysis to see ranked candidates here.
@@ -250,15 +252,15 @@ export function ResultsPanel({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="flex w-full min-w-0 flex-col gap-6">
       {loading && showPartial && (
-        <div className="mb-6 border border-black bg-[#f4f4f4] p-4">
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 font-medium">
-              <Loader2 className="size-4 animate-spin" />
-              Agent pipeline running…
+        <div className="w-full border border-black bg-[#f4f4f4] p-4">
+          <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+            <span className="flex min-w-0 items-center gap-2 font-medium">
+              <Loader2 className="size-4 shrink-0 animate-spin" />
+              <span className="truncate">Agent pipeline running…</span>
             </span>
-            <span className="text-black/50">
+            <span className="shrink-0 text-black/50">
               {analyzedCount}
               {totalCandidates > 0 ? ` / ${totalCandidates}` : ""}
             </span>
@@ -271,7 +273,7 @@ export function ResultsPanel({
       )}
 
       {error && (
-        <div className="mb-6 border border-black bg-[#f4f4f4] px-4 py-2 text-sm">
+        <div className="w-full border border-black bg-[#f4f4f4] px-4 py-2 text-sm">
           {error}
         </div>
       )}
@@ -293,44 +295,52 @@ export function ResultsPanel({
       {jobRequirements && <JobRequirementsPanel requirements={jobRequirements} />}
 
       {analyzedCount > 0 && (
-        <section className="mb-8 grid grid-cols-2 border border-black lg:grid-cols-4">
-          <div className="border-b border-black p-5 sm:border-b-0 sm:border-r">
-            <p className="text-[10px] font-medium tracking-[0.2em] text-black/50">
+        <section className="grid w-full min-w-0 grid-cols-2 border border-black lg:grid-cols-4">
+          <div className="min-w-0 border-b border-r border-black p-3 sm:p-5 lg:border-b-0">
+            <p className="text-[9px] font-medium leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.2em]">
               ANALYZED
             </p>
-            <p className="mt-2 text-3xl font-bold">{analyzedCount}</p>
+            <p className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl">
+              {analyzedCount}
+            </p>
           </div>
-          <div className="border-b border-black p-5 sm:border-b-0 sm:border-r">
-            <p className="text-[10px] font-medium tracking-[0.2em] text-black/50">
+          <div className="min-w-0 border-b border-black p-3 sm:border-r sm:p-5 lg:border-b-0 lg:border-r">
+            <p className="text-[9px] font-medium leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.2em]">
               TOP MATCH
             </p>
-            <p className="mt-2 text-3xl font-bold">{topScore}%</p>
+            <p className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl">
+              {topScore}%
+            </p>
           </div>
-          <div className="border-b border-black p-5 lg:border-b-0 lg:border-r">
-            <p className="text-[10px] font-medium tracking-[0.2em] text-black/50">
+          <div className="min-w-0 border-b border-r border-black p-3 sm:p-5 lg:border-b-0">
+            <p className="text-[9px] font-medium leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.2em]">
               AVERAGE
             </p>
-            <p className="mt-2 text-3xl font-bold">{avgScore}%</p>
+            <p className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl">
+              {avgScore}%
+            </p>
           </div>
-          <div className="p-5">
-            <p className="text-[10px] font-medium tracking-[0.2em] text-black/50">
+          <div className="min-w-0 p-3 sm:p-5">
+            <p className="text-[9px] font-medium leading-tight tracking-[0.15em] text-black/50 sm:text-[10px] sm:tracking-[0.2em]">
               STRONG FITS
             </p>
-            <p className="mt-2 text-3xl font-bold">{strongMatches}</p>
+            <p className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl">
+              {strongMatches}
+            </p>
           </div>
         </section>
       )}
 
       {analyzedCount > 0 && (
-        <div className="mb-6 flex flex-col gap-4 border-b border-black pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">
+        <div className="flex w-full min-w-0 flex-col gap-4 border-b border-black pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold tracking-tight sm:text-xl">
               Ranked candidates
             </h2>
             <p className="mt-1 text-sm text-black/60">
               {hiddenGems > 0 && (
                 <span className="mr-2 inline-flex items-center gap-1 font-medium text-amber-700">
-                  <Gem className="size-3.5" />
+                  <Gem className="size-3.5 shrink-0" />
                   {hiddenGems} hidden gem{hiddenGems === 1 ? "" : "s"}
                 </span>
               )}
@@ -341,7 +351,7 @@ export function ResultsPanel({
             variant="outline"
             onClick={exportJson}
             disabled={!analyzedCount}
-            className="!py-2"
+            className="w-full shrink-0 !py-2 sm:w-auto"
           >
             <Download className="mr-2 size-4" />
             EXPORT JSON
@@ -350,7 +360,7 @@ export function ResultsPanel({
       )}
 
       {analyzedCount > 0 && (
-        <div className="grid gap-0 divide-y divide-black border border-black">
+        <div className="w-full min-w-0 divide-y divide-black border border-black">
           {[...results]
             .sort((a, b) => {
               if (a.isHiddenGem && !b.isHiddenGem) return -1;

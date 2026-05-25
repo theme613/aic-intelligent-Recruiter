@@ -57,25 +57,24 @@ export function CandidateCard({ candidate, rank }: Props) {
     <>
       <article
         className={cn(
-          "relative p-6 sm:p-8",
+          "p-4 sm:p-6 lg:p-8",
           isGem
             ? "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-white"
             : "bg-white",
         )}
       >
-        {isGem && (
-          <div className="absolute right-4 top-4 flex items-center gap-1.5 border border-amber-600 bg-amber-400 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-black shadow-[2px_2px_0_0_#000]">
-            <Gem className="size-3.5" aria-hidden />
-            HIDDEN GEM
-          </div>
-        )}
-
-        <div className="flex flex-row items-start justify-between gap-4 pr-28">
-          <div className="space-y-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            {isGem && (
+              <div className="inline-flex w-fit items-center gap-1.5 border border-amber-600 bg-amber-400 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-black shadow-[2px_2px_0_0_#000]">
+                <Gem className="size-3.5 shrink-0" aria-hidden />
+                HIDDEN GEM
+              </div>
+            )}
             <p className="text-xs font-medium tracking-[0.2em] text-black/50">
               #{rank}
             </p>
-            <h3 className="text-xl font-bold tracking-tight">
+            <h3 className="text-lg font-bold tracking-tight sm:text-xl">
               {candidate.name}
             </h3>
             {candidate.currentTitle && (
@@ -83,11 +82,13 @@ export function CandidateCard({ candidate, rank }: Props) {
                 {candidate.currentTitle}
               </p>
             )}
-            <p className="text-sm text-black/60">{candidate.summary}</p>
+            <p className="text-sm leading-relaxed text-black/60">
+              {candidate.summary}
+            </p>
           </div>
           <span
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-sm font-bold",
+              "w-fit shrink-0 self-start rounded-full border px-3 py-1 text-sm font-bold",
               scoreBadgeClass(candidate.score, isGem),
             )}
           >
