@@ -22,7 +22,7 @@ Built for the APU AIC hackathon demo with **Google Gemini** as the LLM provider.
 | Styling | Tailwind CSS + shadcn/ui |
 | AI | [Google Gemini](https://ai.google.dev/) (`gemini-2.0-flash`) |
 | Vector search | Local cosine similarity (`src/lib/vector.ts`) |
-| PDF parsing | pdf-parse |
+| PDF parsing | unpdf (serverless-safe) |
 | DOCX parsing | mammoth |
 | Deployment | Vercel |
 
