@@ -1,5 +1,5 @@
 import type { CandidateAnalysis } from "@/lib/gemini";
-import { computeOverallScore } from "@/lib/gemini";
+import type { JobRequirements } from "@/lib/agent/types";
 
 export const demoJob = {
   jobTitle: "Frontend Developer",
@@ -19,6 +19,22 @@ Requirements:
 - Experience with Next.js App Router
 - Strong CSS skills (Tailwind preferred)
 - Familiarity with REST APIs and Git workflows`,
+};
+
+export const demoJobRequirements: JobRequirements = {
+  role_title: "Frontend Developer",
+  seniority_level: "mid",
+  hard_skills: ["react", "typescript", "next.js", "tailwind css", "rest apis"],
+  soft_skills: ["graphql", "jest", "accessibility", "design systems"],
+  domain: "saas",
+  responsibilities: [
+    "Build user-facing features with React and Next.js App Router",
+    "Write type-safe TypeScript and integrate REST APIs",
+    "Implement polished UI with Tailwind CSS",
+    "Collaborate with design and backend on end-to-end delivery",
+  ],
+  hard_constraints: [],
+  title_keywords: ["frontend", "developer", "engineer"],
 };
 
 export const demoCandidates = [
@@ -92,103 +108,178 @@ Systems Developer — Enterprise Corp (2018–2020)
 EDUCATION
 M.S. Software Engineering`,
   },
+  {
+    name: "Jordan Kim",
+    resumeText: `Jordan Kim
+UI/UX Designer | jordan.kim@email.com
+
+SUMMARY
+Product designer who ships production React code — not just mockups. 3 years building customer-facing dashboards and design systems in code.
+
+SKILLS
+React, TypeScript, Next.js, Tailwind CSS, Figma, REST APIs, Storybook, Git
+
+EXPERIENCE
+Senior Product Designer — PayFlow (2022–Present)
+- Shipped React + TypeScript customer analytics dashboard used by 40k merchants
+- Led Next.js App Router prototype that became production billing UI
+- Built Tailwind component library adopted by 3 engineering squads
+- Integrated REST APIs for live transaction previews in design QA
+
+Product Designer — Creative Labs (2020–2022)
+- Coded responsive React prototypes that reduced handoff cycles by 50%
+- Improved Lighthouse accessibility scores from 62 to 94 on marketing site
+
+EDUCATION
+B.Des Interaction Design — RMIT`,
+  },
 ];
 
-const sarahDimensions = {
-  skillScore: 96,
-  experienceScore: 90,
-  domainScore: 88,
-  seniorityScore: 85,
-  outreachScore: 82,
-};
-
-const marcusDimensions = {
-  skillScore: 72,
-  experienceScore: 68,
-  domainScore: 55,
-  seniorityScore: 70,
-  outreachScore: 65,
-};
-
-const davidDimensions = {
-  skillScore: 28,
-  experienceScore: 62,
-  domainScore: 35,
-  seniorityScore: 45,
-  outreachScore: 40,
-};
-
-export const demoMockResults: CandidateAnalysis[] = [
+const demoMock: CandidateAnalysis[] = [
   {
     name: "Sarah Chen",
-    ...sarahDimensions,
-    score: computeOverallScore(sarahDimensions),
-    matchedSkills: ["React", "TypeScript", "Next.js", "Tailwind CSS", "REST APIs"],
+    currentTitle: "Senior Frontend Developer",
+    score: 91,
+    semanticScore: 0.92,
+    skillScore: 96,
+    experienceScore: 90,
+    domainScore: 88,
+    seniorityScore: 85,
+    outreachScore: 82,
+    isHiddenGem: false,
+    matchedSkills: ["react", "typescript", "next.js", "tailwind css", "rest apis"],
     missingSkills: [],
     keyStrengths: [
-      "Led Next.js App Router migration for a production customer dashboard at CloudStack",
-      "Built a Tailwind-based design system used across multiple product surfaces",
-      "Improved Lighthouse performance scores by 35% on React/TypeScript SPAs at WebForge",
+      "Led Next.js App Router migration for production customer dashboard at CloudStack",
+      "Built Tailwind design system used across product surfaces",
+      "Improved Lighthouse scores by 35% on React/TypeScript SPAs",
     ],
     whyThisPerson:
-      "Sarah brings four years of production React and Next.js experience, including an App Router migration that mirrors our stack. Her TypeScript and Tailwind work on a design system shows she can ship polished UI at pace.",
+      "Sarah has four years shipping React and Next.js for SaaS products, including an App Router migration that mirrors this role exactly. Her Tailwind design-system work and REST/GraphQL integration show she can own polished UI delivery end-to-end.",
     skillsGap:
-      "Could deepen GraphQL exposure if we expand beyond REST, though her API integration background is already strong.",
+      "GraphQL is listed as preferred rather than required — she has exposure but the JD centers on REST.",
+    interviewFocusAreas: [
+      "Walk through the App Router migration — what broke, metrics you tracked, and release safety.",
+      "How did you structure the Tailwind design system for cross-team adoption?",
+      "Describe a performance win with measurable before/after (e.g. Lighthouse).",
+    ],
     interviewFocus:
-      "Walk me through how you structured the App Router migration — what broke, what you measured, and how you kept releases safe.",
+      "Walk through the App Router migration. How did you structure the Tailwind design system? Describe a performance win with measurable before/after.",
     outreachMessage:
-      "Hi Sarah — I came across your CloudStack work on Next.js and Tailwind. We're hiring a Frontend Developer at APU AIC Labs on a similar stack. Would you be open to a quick chat this week?",
-    summary: "Strong frontend specialist with React, TypeScript, and Next.js leadership experience.",
+      "Hi Sarah — I was impressed by your CloudStack work leading a Next.js App Router migration and building a Tailwind design system. We're hiring a Frontend Developer at APU AIC Labs on a very similar React/TypeScript stack. Your SaaS dashboard experience looks like a strong match. Would you be open to a quick chat this week?",
+    summary:
+      "Sarah has four years shipping React and Next.js for SaaS products, including an App Router migration that mirrors this role exactly.",
+    flags: [],
+  },
+  {
+    name: "Jordan Kim",
+    currentTitle: "UI/UX Designer",
+    score: 86,
+    semanticScore: 0.89,
+    skillScore: 92,
+    experienceScore: 88,
+    domainScore: 85,
+    seniorityScore: 78,
+    outreachScore: 80,
+    isHiddenGem: true,
+    hiddenGemReason:
+      "Ranked low because title says UI/UX Designer, but promoted because shipped production React + TypeScript dashboard for 40k merchants, led Next.js App Router billing UI, and built Tailwind library adopted by 3 engineering squads",
+    hiddenGemStory:
+      "Title said UI/UX Designer. Work said Frontend Developer. We promoted them.",
+    matchedSkills: ["react", "typescript", "next.js", "tailwind css", "rest apis"],
+    missingSkills: [],
+    keyStrengths: [
+      "Shipped React + TypeScript analytics dashboard for 40k merchants at PayFlow",
+      "Led Next.js App Router prototype that became production billing UI",
+      "Built Tailwind component library adopted by 3 engineering squads",
+    ],
+    whyThisPerson:
+      "Jordan's title says designer, but the resume reads like a frontend engineer: production React dashboards, a Next.js App Router billing UI, and a Tailwind system used by multiple squads. Traditional keyword filters would have skipped this profile entirely.",
+    skillsGap:
+      "Formal engineering title is missing — validate depth on testing, CI/CD, and large-scale refactors in interview.",
+    interviewFocusAreas: [
+      "What percentage of your week is hands-on React/TypeScript vs. Figma — show a recent PR you merged.",
+      "How did the Next.js billing UI prototype move from design to production release?",
+      "Describe how you integrated REST APIs during design QA at PayFlow.",
+    ],
+    interviewFocus:
+      "What percentage of your week is hands-on React/TypeScript vs. Figma? How did the Next.js billing UI move to production?",
+    outreachMessage:
+      "I almost missed your profile — your title didn't match, but your work did. Hi Jordan — your PayFlow dashboard shipped in React and TypeScript for 40k merchants, which is exactly the kind of end-to-end frontend ownership we need. We're hiring a Frontend Developer at APU AIC Labs and your Next.js billing UI + Tailwind system work stood out immediately. Would love to chat for 15 minutes this week if you're open to it.",
+    summary:
+      "Title said UI/UX Designer. Work said Frontend Developer. We promoted them.",
+    flags: ["hidden_gem", "title_mismatch"],
   },
   {
     name: "Marcus Rivera",
-    ...marcusDimensions,
-    score: computeOverallScore(marcusDimensions),
-    matchedSkills: ["React", "Next.js"],
-    missingSkills: ["TypeScript", "Tailwind CSS", "REST APIs"],
+    currentTitle: "Software Developer",
+    score: 66,
+    semanticScore: 0.72,
+    skillScore: 72,
+    experienceScore: 68,
+    domainScore: 55,
+    seniorityScore: 70,
+    outreachScore: 65,
+    isHiddenGem: false,
+    matchedSkills: ["react", "next.js"],
+    missingSkills: ["typescript", "tailwind css", "rest apis"],
     keyStrengths: [
-      "Shipped internal React + Next.js tools at DataPulse over 3+ years",
-      "Comfortable connecting frontends to Node.js/MongoDB backends for full-stack delivery",
-      "Maintained and modernized legacy React/jQuery hybrid apps at StartupHub",
+      "3+ years React/Next.js internal tools at DataPulse",
+      "Full-stack delivery with Node.js backends",
     ],
     whyThisPerson:
-      "Marcus has solid React and Next.js delivery experience and understands full-stack context. He could ramp on TypeScript and Tailwind with mentorship given his JavaScript foundation.",
+      "Marcus has three years delivering React and Next.js internal tools with credible full-stack context. He could ramp on TypeScript and Tailwind with mentorship.",
     skillsGap:
-      "Needs structured TypeScript adoption and more consistent Tailwind/CSS system work before matching senior UI expectations.",
-    interviewFocus:
-      "How are you adopting TypeScript today, and what would your 30-day plan look like to reach production-grade type safety on our stack?",
+      "TypeScript and Tailwind are thin on the resume — mostly CSS modules today.",
+    interviewFocusAreas: [
+      "What is your TypeScript adoption plan in production today?",
+      "Show a component you built with clear ownership and user impact metrics.",
+      "How would you move from pages router to App Router?",
+    ],
+    interviewFocus: "TypeScript adoption plan. Component ownership. App Router migration path.",
     outreachMessage:
-      "Hi Marcus — your Next.js projects at DataPulse caught my eye. We're looking for a mid-level frontend dev at APU AIC Labs. Interested in learning more about a role where you'd grow TypeScript skills?",
-    summary: "Capable React/Next.js developer — strong skills, weaker SaaS frontend domain fit.",
+      "Hi Marcus — your React and Next.js work at DataPulse stood out. We're looking for a mid-level frontend developer at APU AIC Labs where you'd grow TypeScript and Tailwind on a modern stack. Interested in a short intro call?",
+    summary:
+      "Marcus has three years delivering React and Next.js internal tools with credible full-stack context.",
+    flags: [],
   },
   {
     name: "David Okonkwo",
-    ...davidDimensions,
-    score: computeOverallScore(davidDimensions),
+    currentTitle: "Backend Engineer",
+    score: 38,
+    semanticScore: 0.41,
+    skillScore: 28,
+    experienceScore: 62,
+    domainScore: 35,
+    seniorityScore: 45,
+    outreachScore: 40,
+    isHiddenGem: false,
     matchedSkills: [],
-    missingSkills: [
-      "React",
-      "TypeScript",
-      "Next.js",
-      "Tailwind CSS",
-      "REST APIs",
-    ],
+    missingSkills: ["react", "typescript", "next.js", "tailwind css", "rest apis"],
     keyStrengths: [
-      "Designed Python/Django microservices and PostgreSQL clusters at FinServe",
-      "Deployed containerized workloads on AWS ECS with Docker",
-      "Built ETL pipelines and batch systems with measurable data throughput gains",
+      "Python/Django microservices and PostgreSQL at FinServe",
+      "AWS ECS + Docker production deployments",
     ],
     whyThisPerson:
-      "David is a strong backend engineer but his profile centers on Python, Django, and infrastructure rather than modern frontend frameworks required for this role.",
+      "David is a capable backend engineer, but his resume shows minimal modern frontend framework work required for this role.",
     skillsGap:
-      "Would need significant upskilling in React, TypeScript, and component-driven UI before being competitive for this frontend position.",
-    interviewFocus:
-      "Have you shipped any user-facing UI in the last two years — if we paired you with a frontend lead, how would you close framework gaps in 60 days?",
+      "No evidence of React, TypeScript, Next.js, or Tailwind.",
+    interviewFocusAreas: [
+      "Have you shipped any user-facing UI in the last two years?",
+      "Are you intentionally pivoting to frontend?",
+    ],
+    interviewFocus: "Any user-facing UI shipped recently? Pivoting to frontend?",
     outreachMessage:
-      "Hi David — thank you for your interest. This role is frontend-focused; I'd be happy to keep you in mind for backend openings that match your Python and cloud background.",
-    summary: "Experienced backend engineer — deep systems experience, minimal frontend alignment.",
+      "Hi David — your microservices experience at FinServe is strong, though this opening is frontend-focused on React/TypeScript. I'd like to stay in touch for backend roles that fit your Python and cloud background.",
+    summary:
+      "David is a capable backend engineer with strong Python and cloud infrastructure experience.",
+    flags: ["seniority_mismatch"],
   },
 ];
+
+export const demoMockResults: CandidateAnalysis[] = demoMock;
+
+export const DEMO_HIDDEN_GEM_NAME = "Jordan Kim";
 
 export function parseRequiredSkills(skills: string): string[] {
   return skills
@@ -202,8 +293,12 @@ export function resolveDemoResult(
   index: number,
 ): CandidateAnalysis {
   const mock =
-    demoMockResults.find(
+    demoMock.find(
       (m) => m.name.toLowerCase() === candidate.name.toLowerCase(),
-    ) ?? demoMockResults[index % demoMockResults.length];
+    ) ?? demoMock[index % demoMock.length];
   return { ...mock, name: candidate.name || mock.name };
+}
+
+export function countDemoHiddenGems(results: CandidateAnalysis[]): number {
+  return results.filter((r) => r.isHiddenGem).length;
 }

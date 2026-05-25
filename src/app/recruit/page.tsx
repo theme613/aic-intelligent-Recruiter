@@ -9,6 +9,7 @@ import { ResultsPanel } from "@/components/ResultsPanel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CandidateAnalysis } from "@/lib/gemini";
+import type { JobRequirements } from "@/lib/agent/types";
 import {
   demoCandidates,
   demoJob,
@@ -28,6 +29,12 @@ export default function RecruitPage() {
   const [job, setJob] = useState<JobFormData>(emptyJob);
   const [candidates, setCandidates] = useState<UploadedCandidate[]>([]);
   const [results, setResults] = useState<CandidateAnalysis[]>([]);
+  const [jobRequirements, setJobRequirements] = useState<JobRequirements | null>(
+    null,
+  );
+  const [reasoningLog, setReasoningLog] = useState<string[]>([]);
+  const [hiddenGemsFound, setHiddenGemsFound] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +75,10 @@ export default function RecruitPage() {
     setDemoMode(true);
     setTab("upload");
     setResults([]);
+    setJobRequirements(null);
+    setReasoningLog([]);
+    setHiddenGemsFound(0);
+    setElapsedSeconds(null);
     setError(null);
   };
 
@@ -76,6 +87,10 @@ export default function RecruitPage() {
     setError(null);
     setProgress(0);
     setResults([]);
+    setJobRequirements(null);
+    setReasoningLog([]);
+    setHiddenGemsFound(0);
+    setElapsedSeconds(null);
     setTab("results");
 
     const total = candidates.length;
@@ -127,14 +142,42 @@ export default function RecruitPage() {
           const event = JSON.parse(line) as {
             type: string;
             result?: CandidateAnalysis;
+            data?: JobRequirements;
+            message?: string;
+            promoted?: string[];
+            count?: number;
+            total?: number;
+            hiddenGems?: number;
+            elapsedSeconds?: number;
             demo?: boolean;
             error?: string;
           };
 
+          if (event.type === "log" && event.message) {
+            setReasoningLog((prev) => [...prev, event.message!]);
+          }
+
+          if (event.type === "job_requirements" && event.data) {
+            setJobRequirements(event.data);
+          }
+
+          if (event.type === "hidden_gems") {
+            setHiddenGemsFound(event.count ?? event.promoted?.length ?? 0);
+          }
+
+          if (event.type === "stats") {
+            setHiddenGemsFound(event.hiddenGems ?? 0);
+            setElapsedSeconds(event.elapsedSeconds ?? null);
+          }
+
           if (event.type === "candidate" && event.result) {
             received += 1;
             setResults((prev) =>
-              [...prev, event.result!].sort((a, b) => b.score - a.score),
+              [...prev, event.result!].sort((a, b) => {
+                if (a.isHiddenGem && !b.isHiddenGem) return -1;
+                if (!a.isHiddenGem && b.isHiddenGem) return 1;
+                return b.score - a.score;
+              }),
             );
             setProgress(
               total > 0 ? Math.min(95, (received / total) * 100) : 50,
@@ -231,11 +274,15 @@ export default function RecruitPage() {
           <TabsContent value="results" className="mt-0 border-0 p-6 sm:p-10">
             <ResultsPanel
               results={results}
+              jobRequirements={jobRequirements}
               loading={loading}
               progress={progress}
               error={error}
               demoMode={demoMode}
               totalCandidates={candidates.length}
+              reasoningLog={reasoningLog}
+              hiddenGemsFound={hiddenGemsFound}
+              elapsedSeconds={elapsedSeconds}
             />
           </TabsContent>
         </Tabs>

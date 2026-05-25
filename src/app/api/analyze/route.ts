@@ -1,11 +1,11 @@
+import { hasGeminiApiKey } from "@/lib/gemini";
 import {
-  analyzeCandidate,
-  hasGeminiApiKey,
-  normalizeAnalysis,
-  type CandidateAnalysis,
-} from "@/lib/gemini";
-import { resolveDemoResult } from "@/lib/demoData";
-import { cosineSimilarityScore } from "@/lib/vector";
+  demoJobRequirements,
+  DEMO_HIDDEN_GEM_NAME,
+  resolveDemoResult,
+} from "@/lib/demoData";
+import { runAgent } from "@/lib/agent/orchestrator";
+import type { AgentEvent } from "@/lib/agent/types";
 
 export const maxDuration = 60;
 
@@ -19,12 +19,7 @@ type AnalyzeRequest = {
   demoMode?: boolean;
 };
 
-type StreamEvent =
-  | { type: "candidate"; result: CandidateAnalysis }
-  | { type: "done"; demo: boolean }
-  | { type: "error"; error: string };
-
-function encodeEvent(encoder: TextEncoder, event: StreamEvent): Uint8Array {
+function encodeEvent(encoder: TextEncoder, event: AgentEvent): Uint8Array {
   return encoder.encode(`${JSON.stringify(event)}\n`);
 }
 
@@ -43,91 +38,127 @@ export async function POST(request: Request) {
 
     if (!jobTitle || !jobDescription || !candidates?.length) {
       return new Response(
-        JSON.stringify({ error: "Job details and at least one candidate are required." }),
+        JSON.stringify({
+          error: "Job details and at least one candidate are required.",
+        }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
     const useDemo = demoMode || !hasGeminiApiKey();
-    const jobContext = `${jobTitle} ${company} ${requiredSkills.join(" ")} ${experienceLevel} ${jobDescription}`;
-
-    const rankedCandidates = [...candidates].sort((a, b) => {
-      const scoreA = cosineSimilarityScore(jobContext, a.resumeText);
-      const scoreB = cosineSimilarityScore(jobContext, b.resumeText);
-      return scoreB - scoreA;
-    });
 
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        const emit = (event: AgentEvent) => {
+          controller.enqueue(encodeEvent(encoder, event));
+        };
+        const demoStarted = Date.now();
 
         try {
           if (useDemo) {
-            for (let i = 0; i < rankedCandidates.length; i++) {
-              const candidate = rankedCandidates[i];
-              const result = resolveDemoResult(candidate, i);
-              controller.enqueue(
-                encodeEvent(encoder, { type: "candidate", result }),
+            const titleMismatches = candidates.filter((c) => {
+              const t = c.name.toLowerCase();
+              return (
+                t.includes("jordan") ||
+                t.includes("david") ||
+                c.name === "Jordan Kim"
               );
+            }).length;
+            const hasJordan = candidates.some(
+              (c) =>
+                c.name.toLowerCase() === DEMO_HIDDEN_GEM_NAME.toLowerCase(),
+            );
+
+            emit({
+              type: "log",
+              message: "Demo mode: streaming Hidden Gem pipeline (no Gemini calls)",
+            });
+            emit({ type: "job_requirements", data: demoJobRequirements });
+            await new Promise((r) => setTimeout(r, 200));
+            emit({
+              type: "log",
+              message: `Step 1 complete: extracted ${demoJobRequirements.hard_skills.length} hard skills, ${demoJobRequirements.hard_constraints.length} constraints`,
+            });
+            await new Promise((r) => setTimeout(r, 200));
+            emit({
+              type: "log",
+              message: `Step 2 complete: parsed ${candidates.length} candidates, ${Math.max(1, titleMismatches)} have title mismatch`,
+            });
+            await new Promise((r) => setTimeout(r, 200));
+            emit({
+              type: "log",
+              message: `Step 3 complete: ${candidates.length} candidates ranked, ${hasJordan ? 1 : 0} flagged as potential hidden gems`,
+            });
+            await new Promise((r) => setTimeout(r, 200));
+            emit({
+              type: "log",
+              message: `Step 4 complete: reranked with rules, 2 flags applied`,
+            });
+            await new Promise((r) => setTimeout(r, 300));
+            const promoted = hasJordan ? [DEMO_HIDDEN_GEM_NAME] : [];
+            emit({
+              type: "hidden_gems",
+              promoted,
+              count: promoted.length,
+            });
+            emit({
+              type: "log",
+              message: `Step 5 complete: reflection promoted ${promoted.length} hidden gem${promoted.length === 1 ? "" : "s"} into shortlist`,
+            });
+            await new Promise((r) => setTimeout(r, 200));
+            emit({
+              type: "log",
+              message: `Step 6 complete: generated pitches for ${candidates.length} candidates`,
+            });
+
+            const results = candidates
+              .map((c, i) => resolveDemoResult(c, i))
+              .sort((a, b) => b.score - a.score);
+
+            for (const result of results) {
+              emit({ type: "candidate", result });
               await new Promise((r) => setTimeout(r, 400));
             }
-            controller.enqueue(
-              encodeEvent(encoder, { type: "done", demo: true }),
-            );
+
+            emit({
+              type: "log",
+              message: `Step 7 complete: drafted ${results.length} outreach messages`,
+            });
+
+            const elapsedSeconds =
+              Math.round(((Date.now() - demoStarted) / 1000) * 10) / 10;
+            emit({
+              type: "stats",
+              total: candidates.length,
+              hiddenGems: promoted.length,
+              elapsedSeconds,
+            });
+            emit({ type: "done", demo: true });
             controller.close();
             return;
           }
 
-          for (const candidate of rankedCandidates) {
-            try {
-              const analysis = await analyzeCandidate({
-                jobTitle,
-                company,
-                requiredSkills,
-                experienceLevel,
-                jobDescription,
-                resumeText: candidate.resumeText,
-                candidateName: candidate.name,
-              });
-
-              const result = normalizeAnalysis(
-                analysis,
-                candidate.name || "Unknown Candidate",
-              );
-
-              controller.enqueue(
-                encodeEvent(encoder, { type: "candidate", result }),
-              );
-            } catch (err) {
-              console.error(
-                "Gemini analysis failed for candidate:",
-                candidate.name,
-                err,
-              );
-              controller.enqueue(
-                encodeEvent(encoder, {
-                  type: "error",
-                  error:
-                    "AI analysis failed. Check your GEMINI_API_KEY or use Load Demo Data for offline demo.",
-                }),
-              );
-              controller.close();
-              return;
-            }
-          }
-
-          controller.enqueue(
-            encodeEvent(encoder, { type: "done", demo: false }),
+          await runAgent(
+            {
+              jobTitle,
+              company,
+              requiredSkills,
+              experienceLevel,
+              jobDescription,
+              candidates,
+            },
+            emit,
           );
+          emit({ type: "done", demo: false });
           controller.close();
         } catch (err) {
-          console.error("Stream error:", err);
-          controller.enqueue(
-            encodeEvent(encoder, {
-              type: "error",
-              error: "Something went wrong while analyzing candidates.",
-            }),
-          );
+          console.error("Agent pipeline error:", err);
+          emit({
+            type: "error",
+            error:
+              "Agent pipeline failed. Check your GEMINI_API_KEY or use Load Demo Data for offline demo.",
+          });
           controller.close();
         }
       },
@@ -143,7 +174,9 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Analyze route error:", err);
     return new Response(
-      JSON.stringify({ error: "Something went wrong while analyzing candidates." }),
+      JSON.stringify({
+        error: "Something went wrong while analyzing candidates.",
+      }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

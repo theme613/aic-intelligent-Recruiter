@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Gem,
   Mail,
   Send,
   Share2,
@@ -23,7 +24,8 @@ import {
 import type { CandidateAnalysis } from "@/lib/gemini";
 import { cn } from "@/lib/utils";
 
-function scoreBadgeClass(score: number): string {
+function scoreBadgeClass(score: number, isGem: boolean): string {
+  if (isGem) return "bg-amber-400 text-black border-amber-600";
   if (score > 70) return "bg-black text-white border-black";
   if (score >= 40) return "bg-[#f4f4f4] text-black border-black";
   return "bg-[#E63946]/10 text-[#E63946] border-[#E63946]";
@@ -38,6 +40,7 @@ export function CandidateCard({ candidate, rank }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const isGem = Boolean(candidate.isHiddenGem);
   const topSkills = candidate.matchedSkills.slice(0, 3);
 
   const showToast = (message: string) => {
@@ -52,31 +55,72 @@ export function CandidateCard({ candidate, rank }: Props) {
 
   return (
     <>
-      <article className="bg-white p-6 sm:p-8">
-        <div className="flex flex-row items-start justify-between gap-4">
+      <article
+        className={cn(
+          "relative p-6 sm:p-8",
+          isGem
+            ? "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-white"
+            : "bg-white",
+        )}
+      >
+        {isGem && (
+          <div className="absolute right-4 top-4 flex items-center gap-1.5 border border-amber-600 bg-amber-400 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-black shadow-[2px_2px_0_0_#000]">
+            <Gem className="size-3.5" aria-hidden />
+            HIDDEN GEM
+          </div>
+        )}
+
+        <div className="flex flex-row items-start justify-between gap-4 pr-28">
           <div className="space-y-1">
             <p className="text-xs font-medium tracking-[0.2em] text-black/50">
               #{rank}
             </p>
-            <h3 className="text-xl font-bold tracking-tight">{candidate.name}</h3>
+            <h3 className="text-xl font-bold tracking-tight">
+              {candidate.name}
+            </h3>
+            {candidate.currentTitle && (
+              <p className="text-sm font-medium text-black/70">
+                {candidate.currentTitle}
+              </p>
+            )}
             <p className="text-sm text-black/60">{candidate.summary}</p>
           </div>
           <span
             className={cn(
               "shrink-0 rounded-full border px-3 py-1 text-sm font-bold",
-              scoreBadgeClass(candidate.score),
+              scoreBadgeClass(candidate.score, isGem),
             )}
           >
             {candidate.score}%
           </span>
         </div>
 
+        {isGem && candidate.hiddenGemStory && (
+          <div className="mt-5 border-2 border-amber-500 bg-amber-100/80 p-4">
+            <p className="text-xs font-bold tracking-[0.2em] text-amber-900">
+              WHY WE PROMOTED THEM
+            </p>
+            <p className="mt-2 text-base font-bold leading-snug text-black">
+              {candidate.hiddenGemStory}
+            </p>
+            {candidate.hiddenGemReason && (
+              <p className="mt-2 text-sm leading-relaxed text-black/75">
+                {candidate.hiddenGemReason}
+              </p>
+            )}
+            <p className="mt-3 text-xs italic text-black/60">
+              Traditional tools would have missed this person. Our agent
+              didn&apos;t.
+            </p>
+          </div>
+        )}
+
         <div className="mt-6 grid gap-3 border border-black bg-[#f4f4f4] p-4">
-          <DimensionBar label="Hard Skills" score={candidate.skillScore} />
-          <DimensionBar label="Experience" score={candidate.experienceScore} />
-          <DimensionBar label="Domain Fit" score={candidate.domainScore} />
-          <DimensionBar label="Seniority" score={candidate.seniorityScore} />
-          <DimensionBar label="Comm Fit" score={candidate.outreachScore} />
+          <DimensionBar label="Hard skill match (30%)" score={candidate.skillScore} />
+          <DimensionBar label="Experience relevance (25%)" score={candidate.experienceScore} />
+          <DimensionBar label="Domain fit (15%)" score={candidate.domainScore} />
+          <DimensionBar label="Seniority alignment (15%)" score={candidate.seniorityScore} />
+          <DimensionBar label="Communication (15%)" score={candidate.outreachScore} />
         </div>
 
         {topSkills.length > 0 && (
@@ -84,7 +128,12 @@ export function CandidateCard({ candidate, rank }: Props) {
             {topSkills.map((skill) => (
               <span
                 key={skill}
-                className="border border-black px-2 py-0.5 text-xs font-medium tracking-wide"
+                className={cn(
+                  "border px-2 py-0.5 text-xs font-medium tracking-wide",
+                  isGem
+                    ? "border-amber-600 bg-amber-50"
+                    : "border-black",
+                )}
               >
                 {skill}
               </span>
@@ -97,7 +146,9 @@ export function CandidateCard({ candidate, rank }: Props) {
             <p className="text-xs font-bold tracking-[0.15em]">KEY STRENGTHS</p>
             {candidate.keyStrengths.map((strength, i) => (
               <li key={i} className="flex gap-2 text-black/80">
-                <span className="text-[#E63946]">—</span>
+                <span className={isGem ? "text-amber-600" : "text-[#E63946]"}>
+                  —
+                </span>
                 <span>{strength}</span>
               </li>
             ))}
@@ -105,16 +156,41 @@ export function CandidateCard({ candidate, rank }: Props) {
         )}
 
         <div className="mt-4 border border-black p-4">
-          <p className="mb-2 text-xs font-bold tracking-[0.15em]">WHY THIS PERSON?</p>
-          <p className="text-sm leading-relaxed text-black/80">{candidate.whyThisPerson}</p>
+          <p className="mb-2 text-xs font-bold tracking-[0.15em]">FIT SUMMARY</p>
+          <p className="text-sm leading-relaxed text-black/80">
+            {candidate.whyThisPerson}
+          </p>
         </div>
+
+        <div className="mt-4 border border-black p-4">
+          <p className="mb-2 text-xs font-bold tracking-[0.15em] text-[#E63946]">
+            GAP ANALYSIS
+          </p>
+          <p className="text-sm text-black/70">{candidate.skillsGap}</p>
+        </div>
+
+        {(candidate.interviewFocusAreas?.length ?? 0) > 0 && (
+          <ul className="mt-4 space-y-2 border border-black p-4 text-sm">
+            <p className="text-xs font-bold tracking-[0.15em]">INTERVIEW FOCUS</p>
+            {candidate.interviewFocusAreas.map((q, i) => (
+              <li key={i} className="flex gap-2 text-black/80">
+                <span className="font-bold">{i + 1}.</span>
+                <span>{q}</span>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="mt-4 grid gap-0 border border-black sm:grid-cols-2">
           <div className="border-b border-black p-4 sm:border-b-0 sm:border-r">
-            <p className="mb-1 text-xs font-bold tracking-[0.15em] text-[#E63946]">
-              SKILLS GAP
+            <p className="mb-1 text-xs font-bold tracking-[0.15em]">
+              MATCHED SKILLS
             </p>
-            <p className="text-sm text-black/70">{candidate.skillsGap}</p>
+            <p className="text-sm text-black/70">
+              {candidate.matchedSkills.length
+                ? candidate.matchedSkills.join(", ")
+                : "None identified"}
+            </p>
           </div>
           <div className="p-4">
             <p className="mb-1 text-xs font-bold tracking-[0.15em]">MISSING</p>
@@ -127,7 +203,10 @@ export function CandidateCard({ candidate, rank }: Props) {
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <PillButton onClick={() => setOutreachOpen(true)} className="flex-1">
+          <PillButton
+            onClick={() => setOutreachOpen(true)}
+            className={cn("flex-1", isGem && "!bg-amber-400 !text-black hover:!bg-amber-300")}
+          >
             <Send className="mr-2 size-4" />
             SEND OUTREACH
           </PillButton>
@@ -158,33 +237,62 @@ export function CandidateCard({ candidate, rank }: Props) {
               <span className="font-bold text-black">Weighted: </span>
               {candidate.score}/100
             </p>
+            {candidate.semanticScore != null && (
+              <p className="mt-2">
+                <span className="font-bold text-black">Semantic: </span>
+                {candidate.semanticScore}
+              </p>
+            )}
           </div>
         )}
       </article>
 
       <Dialog open={outreachOpen} onOpenChange={setOutreachOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-none border-black bg-white sm:max-w-lg">
+        <DialogContent
+          className={cn(
+            "max-h-[90vh] overflow-y-auto rounded-none border-black bg-white sm:max-w-lg",
+            isGem && "border-amber-600",
+          )}
+        >
           <DialogHeader>
-            <DialogTitle className="font-bold tracking-tight">
+            <DialogTitle className="flex items-center gap-2 font-bold tracking-tight">
+              {isGem && <Gem className="size-5 text-amber-600" />}
               Outreach — {candidate.name}
             </DialogTitle>
             <DialogDescription className="text-black/60">
-              Personalized message for LinkedIn or email
+              {isGem
+                ? "Hidden gem outreach — opens with the title-mismatch hook"
+                : "Personalized message for LinkedIn or email"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border border-black bg-[#f4f4f4] p-4">
+          <div
+            className={cn(
+              "border p-4",
+              isGem
+                ? "border-amber-500 bg-amber-50"
+                : "border-black bg-[#f4f4f4]",
+            )}
+          >
             <p className="whitespace-pre-wrap text-sm leading-relaxed">
               {candidate.outreachMessage}
             </p>
           </div>
 
-          <div className="border border-black bg-white p-4">
-            <p className="text-sm">
-              <span className="text-[#E63946]">💡</span> Interview tip:{" "}
-              {candidate.interviewFocus}
-            </p>
-          </div>
+          {(candidate.interviewFocusAreas?.length ?? 0) > 0 && (
+            <div className="border border-black bg-white p-4">
+              <p className="mb-2 text-xs font-bold tracking-[0.15em]">
+                INTERVIEW FOCUS
+              </p>
+              <ul className="space-y-2 text-sm">
+                {candidate.interviewFocusAreas.map((q, i) => (
+                  <li key={i}>
+                    <span className="text-[#E63946]">{i + 1}.</span> {q}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {toast && (
             <p className="border border-black bg-black px-3 py-2 text-center text-sm text-white">
