@@ -13,6 +13,10 @@ const MAX_RETRIES = 4;
 // gemini-2.5-flash free tier = 5 RPM. Sequential calls (concurrency=1) avoid
 // bursting through the limit. Override via GEMINI_CONCURRENCY env var.
 const DEFAULT_CONCURRENCY = 1;
+// Maximum time we're willing to sleep on a single retry. On Vercel Hobby
+// the function dies at 60s, so longer waits = guaranteed timeout. Better
+// to give up and let the caller use its fallback path.
+const MAX_RETRY_DELAY_MS = 12000;
 
 function isRetryableError(err: unknown): boolean {
   if (typeof err !== "object" || !err) return false;
@@ -54,13 +58,22 @@ export async function withRetry<T>(
       attempt++;
       if (!isRetryableError(err) || attempt >= maxRetries) throw err;
       // For 503, use a short exponential backoff; for 429, honour the API's retryDelay
-      const delayMs = isRateLimitError(err)
+      const suggestedDelay = isRateLimitError(err)
         ? parseRetryDelayMs(err)
         : Math.min(2000 * Math.pow(2, attempt - 1), 30000);
+      // Cap retry delay to avoid exceeding Vercel function timeout. If the
+      // API wants us to wait longer than the cap, give up and let the
+      // caller's fallback path run instead of dying at 60s.
+      if (suggestedDelay > MAX_RETRY_DELAY_MS) {
+        console.warn(
+          `[retry] ${label} — ${(err as { status?: number }).status} wants ${suggestedDelay}ms wait (> ${MAX_RETRY_DELAY_MS}ms cap), giving up to allow fallback`,
+        );
+        throw err;
+      }
       console.warn(
-        `[retry] ${label} — ${(err as { status?: number }).status} (attempt ${attempt}/${maxRetries}), waiting ${delayMs}ms`,
+        `[retry] ${label} — ${(err as { status?: number }).status} (attempt ${attempt}/${maxRetries}), waiting ${suggestedDelay}ms`,
       );
-      await new Promise((r) => setTimeout(r, delayMs));
+      await new Promise((r) => setTimeout(r, suggestedDelay));
     }
   }
 }
