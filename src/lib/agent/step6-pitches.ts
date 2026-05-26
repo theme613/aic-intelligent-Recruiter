@@ -1,5 +1,6 @@
 import { PROMPT_PITCH } from "./prompts";
-import { getModel, parseJson } from "./llm";
+import { generateWithRetry, getModel, parseJson } from "./llm";
+import { mapConcurrent } from "./retry";
 import type {
   JobRequirements,
   RecruiterOutput,
@@ -97,7 +98,7 @@ async function generatePitch(
       isHiddenGem: c.is_hidden_gem,
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(model, prompt, `step6:${c.name}`);
     const parsed = parseJson<PitchResponse>(result.response.text());
     const story =
       c.is_hidden_gem
@@ -126,14 +127,15 @@ async function generatePitch(
 
 /**
  * STEP 6 — generate_pitches(shortlist, jd) -> list[RecruiterOutput]
- * Model: gemini-2.5-flash-preview-05-20 · parallel via Promise.all
+ * Model: gemini-2.5-flash · concurrency-limited to avoid 429 bursts
  */
 export async function generatePitches(
   shortlist: ScoredCandidate[],
   jd: JobRequirements,
 ): Promise<Omit<RecruiterOutput, "outreach_message">[]> {
-  return Promise.all(
-    shortlist.map(async (c, i) => {
+  return mapConcurrent(
+    shortlist,
+    async (c, i) => {
       const pitch = await generatePitch(c, jd);
       return {
         ...c,
@@ -156,6 +158,6 @@ export async function generatePitches(
               )
             : null,
       };
-    }),
+    },
   );
 }

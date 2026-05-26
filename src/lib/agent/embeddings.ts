@@ -1,17 +1,22 @@
 import { getEmbeddingModel } from "./llm";
+import { withRetry } from "./retry";
 
 export type EmbedTaskType = "RETRIEVAL_QUERY" | "RETRIEVAL_DOCUMENT";
 
-/** Single embedding via text-embedding-004. */
+/** Single embedding via text-embedding-004 with retry on 429. */
 export async function embed(
   text: string,
   taskType: EmbedTaskType,
 ): Promise<number[]> {
   const model = getEmbeddingModel();
-  const result = await model.embedContent({
-    content: { role: "user", parts: [{ text }] },
-    taskType,
-  } as Parameters<typeof model.embedContent>[0]);
+  const result = await withRetry(
+    () =>
+      model.embedContent({
+        content: { role: "user", parts: [{ text }] },
+        taskType,
+      } as Parameters<typeof model.embedContent>[0]),
+    "embed",
+  );
   return result.embedding.values;
 }
 

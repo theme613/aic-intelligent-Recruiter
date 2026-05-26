@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai";
+import { withRetry } from "./retry";
 
 /**
  * Per-task Gemini model factory.
@@ -25,7 +26,7 @@ type TaskConfig = {
 
 const TASKS: Record<Task, TaskConfig> = {
   extract_jd: {
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     temperature: 0.1,
     maxTokens: 1200,
     responseMimeType: "application/json",
@@ -33,7 +34,7 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a structured extraction engine. Return ONLY valid JSON, no markdown, no commentary.",
   },
   extract_candidate: {
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     temperature: 0.1,
     maxTokens: 1500,
     responseMimeType: "application/json",
@@ -41,7 +42,7 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a resume parser. Normalize skill synonyms (e.g. 'ML pipelines' = 'machine learning', 'Postgres' = 'sql'). Use lowercase skills. Return ONLY valid JSON.",
   },
   fact_check: {
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     temperature: 0.1,
     maxTokens: 1000,
     responseMimeType: "application/json",
@@ -50,7 +51,7 @@ const TASKS: Record<Task, TaskConfig> = {
   },
   hidden_gem: {
     // AGENTIC STEP — Hidden Gem detection, called ONCE per run
-    model: "gemini-2.5-pro",
+    model: "gemini-2.5-flash",
     temperature: 0.3,
     maxTokens: 2500,
     responseMimeType: "application/json",
@@ -86,6 +87,21 @@ function client(): GoogleGenerativeAI {
   return _client;
 }
 
+// text-embedding-004 is only available on the stable v1 endpoint,
+// not the v1beta endpoint the SDK defaults to.
+let _embeddingClient: GoogleGenerativeAI | null = null;
+
+function embeddingClient(): GoogleGenerativeAI {
+  if (_embeddingClient) return _embeddingClient;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+  // @ts-expect-error — requestOptions is supported in 0.21+ but not yet typed in all versions
+  _embeddingClient = new GoogleGenerativeAI(apiKey, { apiVersion: "v1" });
+  return _embeddingClient;
+}
+
 export function getModel(task: Task): GenerativeModel {
   const cfg = TASKS[task];
   return client().getGenerativeModel({
@@ -102,7 +118,19 @@ export function getModel(task: Task): GenerativeModel {
 }
 
 export function getEmbeddingModel(): GenerativeModel {
-  return client().getGenerativeModel({ model: "text-embedding-004" });
+  return embeddingClient().getGenerativeModel({ model: "text-embedding-004" });
+}
+
+/**
+ * Drop-in replacement for model.generateContent() with automatic 429 retry.
+ * All pipeline steps should use this instead of calling model.generateContent directly.
+ */
+export async function generateWithRetry(
+  model: GenerativeModel,
+  prompt: Parameters<GenerativeModel["generateContent"]>[0],
+  label = "llm",
+) {
+  return withRetry(() => model.generateContent(prompt), label);
 }
 
 /** Strip optional ```json fences then JSON.parse. */

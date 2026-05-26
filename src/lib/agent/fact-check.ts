@@ -12,7 +12,8 @@
  * of the pipeline.
  */
 
-import { getModel, parseJson } from "./llm";
+import { generateWithRetry, getModel, parseJson } from "./llm";
+import { mapConcurrent } from "./retry";
 import type {
   Candidate,
   CompanyCheck,
@@ -65,7 +66,7 @@ RESUME:
 ${candidate.raw_resume}
 `.trim();
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(model, prompt, `fact-check:${candidate.name}`);
     const parsed = parseJson<RawConsistencyResult>(result.response.text());
 
     return {
@@ -259,9 +260,9 @@ export async function factCheckCandidate(
   return { ...candidate, factCheck };
 }
 
-/** Run fact-check for all candidates in parallel. */
+/** Run fact-check for all candidates with concurrency limiting. */
 export async function factCheckCandidates(
   candidates: Candidate[],
 ): Promise<Candidate[]> {
-  return Promise.all(candidates.map((c) => factCheckCandidate(c)));
+  return mapConcurrent(candidates, (c) => factCheckCandidate(c));
 }

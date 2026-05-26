@@ -1,5 +1,5 @@
 import { PROMPT_OUTREACH } from "./prompts";
-import { getModel } from "./llm";
+import { generateWithRetry, getModel } from "./llm";
 import type { ScoredCandidate, JobRequirements } from "./types";
 
 function firstNameOf(name: string): string {
@@ -47,7 +47,7 @@ export async function generateOutreach(
       isHiddenGem: candidate.is_hidden_gem,
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(model, prompt, `step7:${candidate.name}`);
     let text = result.response.text().trim();
 
     if (candidate.is_hidden_gem && !text.toLowerCase().includes("almost missed")) {

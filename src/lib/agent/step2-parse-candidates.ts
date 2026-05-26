@@ -1,5 +1,6 @@
 import { PROMPT_PARSE_CANDIDATE } from "./prompts";
-import { getModel, parseJson } from "./llm";
+import { generateWithRetry, getModel, parseJson } from "./llm";
+import { mapConcurrent } from "./retry";
 import type { Candidate, JobRequirements } from "./types";
 import { computeTitleMatchFlag } from "./utils";
 
@@ -35,7 +36,7 @@ async function parseOne(
       titleKeywords: jd.title_keywords.join(", ") || jd.role_title,
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(model, prompt, `step2:${hintName ?? "candidate"}`);
     const parsed = parseJson<Omit<Candidate, "title_match_flag" | "raw_resume">>(
       result.response.text(),
     );
@@ -69,15 +70,13 @@ async function parseOne(
 
 /**
  * STEP 2 — parse_candidates(resumes) -> list[Candidate]
- * Model: gemini-2.0-flash · parallel via Promise.all
+ * Model: gemini-2.0-flash · concurrency-limited to avoid 429 bursts
  */
 export async function parseCandidates(
   resumes: { name?: string; resumeText: string }[],
   jd: JobRequirements,
 ): Promise<Candidate[]> {
-  return Promise.all(
-    resumes.map((r) => parseOne(r.resumeText, jd, r.name)),
-  );
+  return mapConcurrent(resumes, (r) => parseOne(r.resumeText, jd, r.name));
 }
 
 export function countTitleMismatches(candidates: Candidate[]): number {

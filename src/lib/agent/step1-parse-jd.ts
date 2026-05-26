@@ -1,5 +1,5 @@
 import { PROMPT_PARSE_JD } from "./prompts";
-import { getModel, parseJson } from "./llm";
+import { generateWithRetry, getModel, parseJson } from "./llm";
 import type { JobRequirements, SeniorityLevel } from "./types";
 import { deriveTitleKeywords } from "./utils";
 
@@ -48,7 +48,7 @@ export async function parseJobDescription(
       jdText,
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(model, prompt, "step1:parse_jd");
     const parsed = parseJson<JobRequirements>(result.response.text());
     const roleTitle = parsed.role_title || hints?.jobTitle || FALLBACK.role_title;
 
