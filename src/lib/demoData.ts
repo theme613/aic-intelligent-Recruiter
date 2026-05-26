@@ -1,5 +1,5 @@
 import type { CandidateAnalysis } from "@/lib/gemini";
-import type { JobRequirements } from "@/lib/agent/types";
+import type { FactCheckReport, JobRequirements, TrustSignal } from "@/lib/agent/types";
 
 export const demoJob = {
   jobTitle: "Frontend Developer",
@@ -41,7 +41,7 @@ export const demoCandidates = [
   {
     name: "Sarah Chen",
     resumeText: `Sarah Chen
-Frontend Engineer | sarah.chen@email.com
+Frontend Engineer | sarah.chen@email.com | github.com/sarah-chen-dev | linkedin.com/in/sarahchendev
 
 SUMMARY
 Frontend developer with 4 years building React and Next.js applications for SaaS products.
@@ -111,7 +111,7 @@ M.S. Software Engineering`,
   {
     name: "Jordan Kim",
     resumeText: `Jordan Kim
-UI/UX Designer | jordan.kim@email.com
+UI/UX Designer | jordan.kim@email.com | github.com/jordankim-ui | linkedin.com/in/jordankimdesign | jordankim.design
 
 SUMMARY
 Product designer who ships production React code — not just mockups. 3 years building customer-facing dashboards and design systems in code.
@@ -132,6 +132,197 @@ Product Designer — Creative Labs (2020–2022)
 
 EDUCATION
 B.Des Interaction Design — RMIT`,
+  },
+];
+
+// ── Demo fact check reports ───────────────────────────────────────────────
+
+const sarahFactCheck: FactCheckReport = {
+  overallVeracity: "high",
+  summary: "Resume is internally consistent. Both employers verified in public records.",
+  consistencyFlags: [],
+  companyChecks: [
+    {
+      name: "CloudStack Inc",
+      dates: "2022–Present",
+      status: "confirmed",
+      domain: "cloudstack.com",
+      website: "https://cloudstack.com",
+      contactPage: "https://cloudstack.com/contact",
+      note: "Confirmed — CloudStack Inc (cloudstack.com) found in public records.",
+    },
+    {
+      name: "WebForge",
+      dates: "2020–2022",
+      status: "likely",
+      domain: "webforge.io",
+      website: "https://webforge.io",
+      contactPage: "https://webforge.io/contact",
+      note: "Likely match: WebForge (webforge.io) — verify it is the same company.",
+    },
+  ],
+};
+
+const jordanFactCheck: FactCheckReport = {
+  overallVeracity: "medium",
+  summary: "Minor flag on experience timeline — worth a quick clarification in interview. PayFlow verified.",
+  consistencyFlags: [
+    {
+      severity: "info",
+      claim: "3 years building customer-facing dashboards",
+      reason: "Resume shows 2 roles from 2020 to present — timeline is plausible but total coding experience may include design-only periods.",
+    },
+  ],
+  companyChecks: [
+    {
+      name: "PayFlow",
+      dates: "2022–Present",
+      status: "confirmed",
+      domain: "payflow.com",
+      website: "https://payflow.com",
+      contactPage: "https://payflow.com/contact",
+      note: "Confirmed — PayFlow (payflow.com) found in public records.",
+    },
+    {
+      name: "Creative Labs",
+      dates: "2020–2022",
+      status: "not_found",
+      note: "\"Creative Labs\" not found in public company registry. Call their HR to verify — search \"Creative Labs careers\" for contact details.",
+    },
+  ],
+};
+
+const marcusFactCheck: FactCheckReport = {
+  overallVeracity: "medium",
+  summary: "One employer unverified. Consider asking for a reference before progressing.",
+  consistencyFlags: [
+    {
+      severity: "info",
+      claim: "learning TypeScript on current role",
+      reason: "JD requires TypeScript — confirm current proficiency level and timeline to production-ready.",
+    },
+  ],
+  companyChecks: [
+    {
+      name: "DataPulse",
+      dates: "2021–Present",
+      status: "not_found",
+      note: "\"DataPulse\" not found in public company registry. Call their HR to verify — search \"DataPulse careers\" for contact details.",
+    },
+    {
+      name: "StartupHub",
+      dates: "2019–2021",
+      status: "skipped",
+      note: "Self-reported / generic employer — no lookup needed.",
+    },
+  ],
+};
+
+const davidFactCheck: FactCheckReport = {
+  overallVeracity: "high",
+  summary: "Resume is internally consistent. Backend experience is well-documented.",
+  consistencyFlags: [],
+  companyChecks: [
+    {
+      name: "FinServe",
+      dates: "2020–Present",
+      status: "confirmed",
+      domain: "finserve.com",
+      website: "https://finserve.com",
+      contactPage: "https://finserve.com/contact",
+      note: "Confirmed — FinServe (finserve.com) found in public records.",
+    },
+    {
+      name: "Enterprise Corp",
+      dates: "2018–2020",
+      status: "likely",
+      domain: "enterprisecorp.com",
+      website: "https://enterprisecorp.com",
+      contactPage: "https://enterprisecorp.com/contact",
+      note: "Likely match: Enterprise Corp (enterprisecorp.com) — verify it is the same company.",
+    },
+  ],
+};
+
+const sarahTrust: TrustSignal[] = [
+  {
+    status: "verified",
+    label: "GitHub verified (34 public repos)",
+    detail: "12 followers · active in last 6 months",
+    url: "https://github.com/sarah-chen-dev",
+  },
+  {
+    status: "verified",
+    label: "3 skills confirmed via GitHub",
+    detail: "react, typescript, next.js — matching repos found",
+    url: "https://github.com/sarah-chen-dev",
+  },
+  {
+    status: "verified",
+    label: "Top project: cloudstack-dashboard ★8",
+    detail: "Next.js App Router dashboard with Tailwind design system (TypeScript)",
+    url: "https://github.com/sarah-chen-dev/cloudstack-dashboard",
+  },
+  {
+    status: "partial",
+    label: "LinkedIn provided",
+    detail: "Employment history requires manual verification.",
+    url: "https://linkedin.com/in/sarahchendev",
+  },
+];
+
+const jordanTrust: TrustSignal[] = [
+  {
+    status: "verified",
+    label: "GitHub verified (22 public repos)",
+    detail: "38 followers · active in last 6 months",
+    url: "https://github.com/jordankim-ui",
+  },
+  {
+    status: "verified",
+    label: "5 skills confirmed via GitHub",
+    detail: "react, typescript, next.js, tailwind css, javascript — matching repos found",
+    url: "https://github.com/jordankim-ui",
+  },
+  {
+    status: "verified",
+    label: "Top project: payflow-analytics ★19",
+    detail: "React + TypeScript analytics dashboard — 40k merchant production app",
+    url: "https://github.com/jordankim-ui/payflow-analytics",
+  },
+  {
+    status: "partial",
+    label: "Portfolio link found",
+    detail: "Visit to assess design / project quality.",
+    url: "https://jordankim.design",
+  },
+  {
+    status: "partial",
+    label: "LinkedIn provided",
+    detail: "Employment history requires manual verification.",
+    url: "https://linkedin.com/in/jordankimdesign",
+  },
+];
+
+const marcusTrust: TrustSignal[] = [
+  {
+    status: "unverified",
+    label: "No public GitHub found",
+    detail: "Skills and experience are self-reported only — no public code to verify.",
+  },
+  {
+    status: "partial",
+    label: "LinkedIn provided",
+    detail: "Employment history requires manual verification.",
+    url: "https://linkedin.com/in/marcusrivera",
+  },
+];
+
+const davidTrust: TrustSignal[] = [
+  {
+    status: "unverified",
+    label: "No public GitHub found",
+    detail: "Skills and experience are self-reported only — no public code to verify.",
   },
 ];
 
@@ -170,6 +361,14 @@ const demoMock: CandidateAnalysis[] = [
     summary:
       "Sarah has four years shipping React and Next.js for SaaS products, including an App Router migration that mirrors this role exactly.",
     flags: [],
+    trustSignals: sarahTrust,
+    factCheck: sarahFactCheck,
+    githubUrl: "https://github.com/sarah-chen-dev",
+    linkedinUrl: "https://linkedin.com/in/sarahchendev",
+    githubTopRepos: [
+      { name: "cloudstack-dashboard", url: "https://github.com/sarah-chen-dev/cloudstack-dashboard", language: "TypeScript", stars: 8, description: "Next.js App Router dashboard with Tailwind design system" },
+      { name: "react-component-lib", url: "https://github.com/sarah-chen-dev/react-component-lib", language: "TypeScript", stars: 4, description: "Reusable React component library" },
+    ],
   },
   {
     name: "Jordan Kim",
@@ -209,6 +408,16 @@ const demoMock: CandidateAnalysis[] = [
     summary:
       "Title said UI/UX Designer. Work said Frontend Developer. We promoted them.",
     flags: ["hidden_gem", "title_mismatch"],
+    trustSignals: jordanTrust,
+    factCheck: jordanFactCheck,
+    githubUrl: "https://github.com/jordankim-ui",
+    linkedinUrl: "https://linkedin.com/in/jordankimdesign",
+    portfolioUrl: "https://jordankim.design",
+    githubTopRepos: [
+      { name: "payflow-analytics", url: "https://github.com/jordankim-ui/payflow-analytics", language: "TypeScript", stars: 19, description: "React + TypeScript analytics dashboard for 40k merchants" },
+      { name: "tailwind-system", url: "https://github.com/jordankim-ui/tailwind-system", language: "CSS", stars: 11, description: "Tailwind component library adopted across 3 engineering squads" },
+      { name: "nextjs-billing-ui", url: "https://github.com/jordankim-ui/nextjs-billing-ui", language: "TypeScript", stars: 6, description: "Next.js App Router billing UI prototype" },
+    ],
   },
   {
     name: "Marcus Rivera",
@@ -242,6 +451,9 @@ const demoMock: CandidateAnalysis[] = [
     summary:
       "Marcus has three years delivering React and Next.js internal tools with credible full-stack context.",
     flags: [],
+    trustSignals: marcusTrust,
+    factCheck: marcusFactCheck,
+    linkedinUrl: "https://linkedin.com/in/marcusrivera",
   },
   {
     name: "David Okonkwo",
@@ -274,6 +486,8 @@ const demoMock: CandidateAnalysis[] = [
     summary:
       "David is a capable backend engineer with strong Python and cloud infrastructure experience.",
     flags: ["seniority_mismatch"],
+    trustSignals: davidTrust,
+    factCheck: davidFactCheck,
   },
 ];
 

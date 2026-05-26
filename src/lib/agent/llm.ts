@@ -10,6 +10,7 @@ import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai"
 type Task =
   | "extract_jd"
   | "extract_candidate"
+  | "fact_check"
   | "hidden_gem"
   | "pitch"
   | "outreach";
@@ -38,6 +39,14 @@ const TASKS: Record<Task, TaskConfig> = {
     responseMimeType: "application/json",
     systemInstruction:
       "You are a resume parser. Normalize skill synonyms (e.g. 'ML pipelines' = 'machine learning', 'Postgres' = 'sql'). Use lowercase skills. Return ONLY valid JSON.",
+  },
+  fact_check: {
+    model: "gemini-2.0-flash",
+    temperature: 0.1,
+    maxTokens: 1000,
+    responseMimeType: "application/json",
+    systemInstruction:
+      "You are a resume fraud-detection specialist. Identify internal inconsistencies, impossible date math, inflated claims, and suspicious patterns. Return ONLY valid JSON.",
   },
   hidden_gem: {
     // AGENTIC STEP — Hidden Gem detection, called ONCE per run

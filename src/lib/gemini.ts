@@ -3,6 +3,8 @@
  * All agent logic lives in `src/lib/agent/*`.
  */
 
+import type { TrustSignal, GitHubRepo, FactCheckReport } from "@/lib/agent/types";
+
 export type CandidateAnalysis = {
   name: string;
   currentTitle?: string;
@@ -27,6 +29,14 @@ export type CandidateAnalysis = {
   hiddenGemReason?: string | null;
   hiddenGemStory?: string | null;
   flags?: string[];
+  /** Step 2.5 trust signals from GitHub enrichment */
+  trustSignals?: TrustSignal[];
+  githubUrl?: string;
+  githubTopRepos?: Pick<GitHubRepo, "name" | "url" | "language" | "stars" | "description">[];
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+  /** Step 2.6 fact check report */
+  factCheck?: FactCheckReport;
 };
 
 export function hasGeminiApiKey(): boolean {

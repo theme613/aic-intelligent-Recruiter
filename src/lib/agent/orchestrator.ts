@@ -1,6 +1,8 @@
 import type { CandidateAnalysis } from "@/lib/gemini";
 import { parseJobDescription } from "./step1-parse-jd";
 import { parseCandidates, countTitleMismatches } from "./step2-parse-candidates";
+import { enrichCandidates } from "./github-enrichment";
+import { factCheckCandidates } from "./fact-check";
 import { vectorSearch, countPotentialHiddenGems } from "./step3-vector-search";
 import { ruleBasedRerank, countFlags } from "./step4-rerank";
 import { hiddenGemDetection } from "./step5-hidden-gem";
@@ -56,10 +58,33 @@ export async function runAgent(
   emit({ type: "job_requirements", data: jd });
 
   // ── Step 2 (parallel) ────────────────────────────────────────────────────
-  const candidates = await parseCandidates(input.candidates, jd);
-  const titleMismatches = countTitleMismatches(candidates);
+  const parsed = await parseCandidates(input.candidates, jd);
+  const titleMismatches = countTitleMismatches(parsed);
   log(
-    `Step 2 complete: parsed ${candidates.length} candidates, ${titleMismatches} have title mismatch`,
+    `Step 2 complete: parsed ${parsed.length} candidates, ${titleMismatches} have title mismatch`,
+  );
+
+  // ── Step 2.5 — GitHub enrichment & trust signals ─────────────────────────
+  const enriched = await enrichCandidates(parsed);
+  const withGitHub = enriched.filter((c) => c.github != null).length;
+  log(
+    `Step 2.5 complete: ${withGitHub}/${enriched.length} candidates have public GitHub profiles verified`,
+  );
+
+  // ── Step 2.6 — Fact check (consistency + company lookup) ─────────────────
+  const candidates = await factCheckCandidates(enriched);
+  const warnings = candidates.reduce(
+    (n, c) =>
+      n + (c.factCheck?.consistencyFlags.filter((f) => f.severity === "warning").length ?? 0),
+    0,
+  );
+  const unverified = candidates.reduce(
+    (n, c) =>
+      n + (c.factCheck?.companyChecks.filter((cc) => cc.status === "not_found").length ?? 0),
+    0,
+  );
+  log(
+    `Step 2.6 complete: fact-checked ${candidates.length} candidates — ${warnings} consistency warning(s), ${unverified} employer(s) unverified`,
   );
 
   // ── Step 3 ───────────────────────────────────────────────────────────────
@@ -155,5 +180,12 @@ export function recruiterOutputToUi(r: RecruiterOutput): CandidateAnalysis {
         : r.fit_summary.length > 140
           ? `${r.fit_summary.slice(0, 137)}…`
           : r.fit_summary,
+    // Step 2.5 + 2.6 enrichment — spread from Candidate through ScoredCandidate
+    trustSignals: r.trustSignals,
+    githubUrl: r.github?.url ?? r.profileUrls?.github,
+    githubTopRepos: r.github?.topRepos.slice(0, 3),
+    linkedinUrl: r.profileUrls?.linkedin,
+    portfolioUrl: r.profileUrls?.portfolio,
+    factCheck: r.factCheck,
   };
 }
