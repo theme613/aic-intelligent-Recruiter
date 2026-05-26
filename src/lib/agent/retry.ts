@@ -18,6 +18,44 @@ const DEFAULT_CONCURRENCY = 1;
 // to give up and let the caller use its fallback path.
 const MAX_RETRY_DELAY_MS = 12000;
 
+// ── Daily-quota circuit breaker ──────────────────────────────────────────
+//
+// Free-tier Gemini enforces a per-model daily request cap. Once tripped, the
+// API will return 429 with a retryDelay of "minutes to hours" until the
+// daily window resets. Hammering retries against it just spams logs and
+// wastes wall time — every subsequent call in the same run will fail too.
+//
+// To degrade cleanly: when we detect a daily-quota 429 for a given model,
+// we mark that model "tripped" and short-circuit ALL future calls for the
+// same model in this process for `TRIP_TTL_MS`. Callers' fallback paths
+// (template pitches, skill-overlap scoring, etc.) take over without delay.
+
+const TRIPPED_MODELS = new Map<string, number>(); // model → unix ms expiry
+const TRIP_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function isModelTripped(model: string | undefined): boolean {
+  if (!model) return false;
+  const expiry = TRIPPED_MODELS.get(model);
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    TRIPPED_MODELS.delete(model);
+    return false;
+  }
+  return true;
+}
+
+function tripModel(model: string, reason: string): void {
+  TRIPPED_MODELS.set(model, Date.now() + TRIP_TTL_MS);
+  console.warn(
+    `[retry] circuit breaker — ${model} marked exhausted for the next hour (${reason}). Falling back without further API calls.`,
+  );
+}
+
+/** Reset the daily-quota circuit breaker. Mostly for tests / cron. */
+export function resetQuotaCircuitBreaker(): void {
+  TRIPPED_MODELS.clear();
+}
+
 function isRetryableError(err: unknown): boolean {
   if (typeof err !== "object" || !err) return false;
   const status = (err as { status?: number }).status;
@@ -27,6 +65,22 @@ function isRetryableError(err: unknown): boolean {
 
 function isRateLimitError(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { status?: number }).status === 429;
+}
+
+/** True iff the 429 errorDetails identify a per-DAY quota (vs per-minute). */
+function isDailyQuotaError(err: unknown): boolean {
+  if (typeof err !== "object" || !err) return false;
+  const details = (err as { errorDetails?: unknown }).errorDetails;
+  if (!Array.isArray(details)) return false;
+  for (const d of details) {
+    const violations = (d as { violations?: unknown }).violations;
+    if (!Array.isArray(violations)) continue;
+    for (const v of violations) {
+      const id = (v as { quotaId?: unknown }).quotaId;
+      if (typeof id === "string" && /PerDay/i.test(id)) return true;
+    }
+  }
+  return false;
 }
 
 function parseRetryDelayMs(err: unknown): number {
@@ -44,18 +98,35 @@ function parseRetryDelayMs(err: unknown): number {
   return isNaN(seconds) ? 6000 : Math.ceil(seconds * 1000) + 500;
 }
 
-/** Retry an async function on 429, honouring the API-suggested retry delay. */
+/**
+ * Retry an async function on 429/503, honouring the API-suggested retry delay.
+ *
+ * When `modelName` is supplied:
+ *  - if that model was previously marked daily-quota-tripped, we throw
+ *    immediately (no waiting, no log spam).
+ *  - if the call returns a daily-quota 429, we mark the model tripped.
+ */
 export async function withRetry<T>(
   fn: () => Promise<T>,
   label = "llm",
+  modelName?: string,
   maxRetries = MAX_RETRIES,
 ): Promise<T> {
+  if (isModelTripped(modelName)) {
+    throw new Error(
+      `[retry] ${label} — ${modelName} daily quota previously exhausted; using fallback`,
+    );
+  }
   let attempt = 0;
   for (;;) {
     try {
       return await fn();
     } catch (err) {
       attempt++;
+      if (isRateLimitError(err) && isDailyQuotaError(err) && modelName) {
+        tripModel(modelName, `${label} hit per-day cap`);
+        throw err;
+      }
       if (!isRetryableError(err) || attempt >= maxRetries) throw err;
       // For 503, use a short exponential backoff; for 429, honour the API's retryDelay
       const suggestedDelay = isRateLimitError(err)

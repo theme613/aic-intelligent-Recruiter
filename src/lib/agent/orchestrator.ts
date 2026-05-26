@@ -71,24 +71,8 @@ export async function runAgent(
     `Step 2.5 complete: ${withGitHub}/${enriched.length} candidates have public GitHub profiles verified`,
   );
 
-  // ── Step 2.6 — Fact check (consistency + company lookup) ─────────────────
-  const candidates = await factCheckCandidates(enriched);
-  const warnings = candidates.reduce(
-    (n, c) =>
-      n + (c.factCheck?.consistencyFlags.filter((f) => f.severity === "warning").length ?? 0),
-    0,
-  );
-  const unverified = candidates.reduce(
-    (n, c) =>
-      n + (c.factCheck?.companyChecks.filter((cc) => cc.status === "not_found").length ?? 0),
-    0,
-  );
-  log(
-    `Step 2.6 complete: fact-checked ${candidates.length} candidates — ${warnings} consistency warning(s), ${unverified} employer(s) unverified`,
-  );
-
   // ── Step 3 ───────────────────────────────────────────────────────────────
-  const semantically = await vectorSearch(jd, candidates);
+  const semantically = await vectorSearch(jd, enriched);
   const potentialGems = countPotentialHiddenGems(semantically);
   log(
     `Step 3 complete: ${semantically.length} candidates ranked, ${potentialGems} flagged as potential hidden gems`,
@@ -107,9 +91,31 @@ export async function runAgent(
   );
   emit({ type: "hidden_gems", promoted, count: hiddenGemsFound });
 
+  // ── Step 5.5 — Fact-check the shortlist only ────────────────────────────
+  // Fact-check is expensive (1 LLM call per candidate) and the result is
+  // only ever surfaced for shortlisted candidates, so we defer it until
+  // after Step 5. This roughly halves daily LLM spend on a typical run.
+  const factCheckedShortlist = await factCheckCandidates(gemShortlist);
+  const warnings = factCheckedShortlist.reduce(
+    (n, c) =>
+      n + (c.factCheck?.consistencyFlags.filter((f) => f.severity === "warning").length ?? 0),
+    0,
+  );
+  const unverified = factCheckedShortlist.reduce(
+    (n, c) =>
+      n + (c.factCheck?.companyChecks.filter((cc) => cc.status === "not_found").length ?? 0),
+    0,
+  );
+  log(
+    `Step 5.5 complete: fact-checked ${factCheckedShortlist.length} shortlisted candidates — ${warnings} consistency warning(s), ${unverified} employer(s) unverified`,
+  );
+
+  // Total evaluated count still reflects the full pool, not just the shortlist.
+  const candidates = enriched;
+
   // ── Steps 6 + 7 (parallel per candidate) ─────────────────────────────────
   const shortlist: RecruiterOutput[] = [];
-  const pitched = await generatePitches(gemShortlist, jd);
+  const pitched = await generatePitches(factCheckedShortlist, jd);
   log(`Step 6 complete: generated pitches for ${pitched.length} candidates`);
 
   await Promise.all(

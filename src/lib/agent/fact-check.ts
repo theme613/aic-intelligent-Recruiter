@@ -218,9 +218,9 @@ function extractEmployersFromResume(
 
 // ── Main entry point ──────────────────────────────────────────────────────
 
-export async function factCheckCandidate(
-  candidate: Candidate,
-): Promise<Candidate> {
+export async function factCheckCandidate<C extends Candidate>(
+  candidate: C,
+): Promise<C> {
   const employers = extractEmployersFromResume(candidate);
 
   const [consistencyResult, companyChecks] = await Promise.all([
@@ -261,8 +261,8 @@ export async function factCheckCandidate(
 }
 
 /** Run fact-check for all candidates with concurrency limiting. */
-export async function factCheckCandidates(
-  candidates: Candidate[],
-): Promise<Candidate[]> {
+export async function factCheckCandidates<C extends Candidate>(
+  candidates: C[],
+): Promise<C[]> {
   return mapConcurrent(candidates, (c) => factCheckCandidate(c));
 }

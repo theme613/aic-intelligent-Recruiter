@@ -32,9 +32,22 @@ type TaskConfig = {
   thinkingBudget?: number;
 };
 
+/**
+ * Task → model assignment.
+ *
+ * Free-tier Gemini quotas are PER-MODEL (each model has its own daily RPD
+ * bucket), so we deliberately spread tasks across model families to multiply
+ * the available headroom. Without this split, a single 5-candidate run can
+ * burn through `gemini-2.5-flash`'s daily RPD on its own.
+ *
+ *   gemini-2.5-flash-lite  → cheap deterministic extraction + outreach
+ *   gemini-2.0-flash       → fact-check (separate family quota)
+ *   gemini-2.5-flash       → reserved for the higher-quality reasoning steps
+ *                            (hidden-gem reflection, pitch narratives)
+ */
 const TASKS: Record<Task, TaskConfig> = {
   extract_jd: {
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     temperature: 0.1,
     maxTokens: 2048,
     responseMimeType: "application/json",
@@ -43,7 +56,7 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a structured extraction engine. Return ONLY valid JSON, no markdown, no commentary.",
   },
   extract_candidate: {
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     temperature: 0.1,
     maxTokens: 2500,
     responseMimeType: "application/json",
@@ -52,11 +65,10 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a resume parser. Normalize skill synonyms (e.g. 'ML pipelines' = 'machine learning', 'Postgres' = 'sql'). Use lowercase skills. Return ONLY valid JSON.",
   },
   fact_check: {
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash",
     temperature: 0.1,
     maxTokens: 1500,
     responseMimeType: "application/json",
-    thinkingBudget: 0,
     systemInstruction:
       "You are a resume fraud-detection specialist. Identify internal inconsistencies, impossible date math, inflated claims, and suspicious patterns. Return ONLY valid JSON.",
   },
@@ -80,7 +92,7 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a senior technical recruiter. Write human, specific narratives that cite resume evidence. Return ONLY valid JSON.",
   },
   outreach: {
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     temperature: 0.8,
     maxTokens: 1000,
     thinkingBudget: 0,
@@ -99,21 +111,6 @@ function client(): GoogleGenerativeAI {
   }
   _client = new GoogleGenerativeAI(apiKey);
   return _client;
-}
-
-// text-embedding-004 is only available on the stable v1 endpoint,
-// not the v1beta endpoint the SDK defaults to.
-let _embeddingClient: GoogleGenerativeAI | null = null;
-
-function embeddingClient(): GoogleGenerativeAI {
-  if (_embeddingClient) return _embeddingClient;
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured");
-  }
-  // @ts-expect-error — requestOptions is supported in 0.21+ but not yet typed in all versions
-  _embeddingClient = new GoogleGenerativeAI(apiKey, { apiVersion: "v1" });
-  return _embeddingClient;
 }
 
 export function getModel(task: Task): GenerativeModel {
@@ -139,20 +136,34 @@ export function getModel(task: Task): GenerativeModel {
   });
 }
 
+/**
+ * `gemini-embedding-001` is the current recommended embedding model and is
+ * served on the v1beta endpoint that the SDK uses by default. The previously
+ * used `text-embedding-004` is deprecated and now returns 404 on v1beta.
+ */
 export function getEmbeddingModel(): GenerativeModel {
-  return embeddingClient().getGenerativeModel({ model: "text-embedding-004" });
+  return client().getGenerativeModel({ model: "gemini-embedding-001" });
 }
 
 /**
  * Drop-in replacement for model.generateContent() with automatic 429 retry.
  * All pipeline steps should use this instead of calling model.generateContent directly.
+ *
+ * The underlying model name (`model.model`) is forwarded to `withRetry` so it
+ * can run a per-model daily-quota circuit breaker.
  */
 export async function generateWithRetry(
   model: GenerativeModel,
   prompt: Parameters<GenerativeModel["generateContent"]>[0],
   label = "llm",
 ) {
-  return withRetry(() => model.generateContent(prompt), label);
+  return withRetry(
+    () => model.generateContent(prompt),
+    label,
+    // `.model` is a public string property on GenerativeModel even though it
+    // isn't reflected in every published .d.ts.
+    (model as unknown as { model: string }).model,
+  );
 }
 
 /**
