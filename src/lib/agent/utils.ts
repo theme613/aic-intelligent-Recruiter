@@ -1,13 +1,45 @@
 import type { JobRequirements } from "./types";
 
-/** Whether a candidate title contains any JD title keyword (title-bias detector). */
+/** Words that alone should not count as a title match (too broad). */
+const GENERIC_TITLE_WORDS = new Set([
+  "engineer",
+  "developer",
+  "analyst",
+  "specialist",
+  "consultant",
+  "lead",
+  "senior",
+  "junior",
+  "staff",
+  "principal",
+  "associate",
+  "manager",
+  "director",
+  "head",
+  "intern",
+  "graduate",
+]);
+
+/**
+ * Whether a candidate title matches the JD role (title-bias detector).
+ * Uses distinctive keywords first (e.g. "frontend" for Frontend Developer) so
+ * "UI Engineer" or "Product Designer" does not false-match on "engineer" alone.
+ */
 export function computeTitleMatchFlag(
   currentTitle: string,
   titleKeywords: string[],
 ): boolean {
   if (titleKeywords.length === 0) return true;
   const t = currentTitle.toLowerCase();
-  return titleKeywords.some((kw) => {
+
+  const distinctive = titleKeywords.filter(
+    (kw) => !GENERIC_TITLE_WORDS.has(kw.toLowerCase().trim()),
+  );
+
+  const keywordsToCheck =
+    distinctive.length > 0 ? distinctive : titleKeywords;
+
+  return keywordsToCheck.some((kw) => {
     const k = kw.toLowerCase().trim();
     return k.length > 2 && t.includes(k);
   });

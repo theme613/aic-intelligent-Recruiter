@@ -416,11 +416,12 @@ export function CandidateCard({ candidate, rank }: Props) {
         )}
 
         <div className="mt-6 grid gap-3 border border-black bg-[#f4f4f4] p-4">
-          <DimensionBar label="Hard skill match (30%)" score={candidate.skillScore} />
-          <DimensionBar label="Experience relevance (25%)" score={candidate.experienceScore} />
-          <DimensionBar label="Domain fit (15%)" score={candidate.domainScore} />
-          <DimensionBar label="Seniority alignment (15%)" score={candidate.seniorityScore} />
-          <DimensionBar label="Communication (15%)" score={candidate.outreachScore} />
+          <p className="text-xs font-bold tracking-[0.15em] text-black/50">AI DIMENSION SCORES</p>
+          <DimensionBar label="Hard skill match" score={candidate.skillScore} />
+          <DimensionBar label="Experience relevance" score={candidate.experienceScore} />
+          <DimensionBar label="Domain fit" score={candidate.domainScore} />
+          <DimensionBar label="Seniority alignment" score={candidate.seniorityScore} />
+          <DimensionBar label="Communication quality" score={candidate.outreachScore} />
         </div>
 
         {topSkills.length > 0 && (

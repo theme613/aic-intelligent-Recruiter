@@ -2,46 +2,30 @@ import { getEmbeddingModel } from "./llm";
 
 export type EmbedTaskType = "RETRIEVAL_QUERY" | "RETRIEVAL_DOCUMENT";
 
-type EmbedContent = {
-  content: { role: "user"; parts: [{ text: string }] };
-  taskType: EmbedTaskType;
-};
-
-function makeRequest(text: string, taskType: EmbedTaskType): EmbedContent {
-  return {
-    content: { role: "user", parts: [{ text }] },
-    taskType,
-  };
-}
-
-/** Single-document embedding via models/text-embedding-004. */
+/** Single embedding via text-embedding-004. */
 export async function embed(
   text: string,
   taskType: EmbedTaskType,
 ): Promise<number[]> {
   const model = getEmbeddingModel();
-  // SDK accepts the request object shape with taskType
-  const result = await model.embedContent(
-    makeRequest(text, taskType) as unknown as Parameters<
-      typeof model.embedContent
-    >[0],
-  );
+  const result = await model.embedContent({
+    content: { role: "user", parts: [{ text }] },
+    taskType,
+  } as Parameters<typeof model.embedContent>[0]);
   return result.embedding.values;
 }
 
-/** Batch embed — preferred for cost when embedding many documents at once. */
+/**
+ * Batch embed — calls embedContent individually in parallel.
+ * The batchEmbedContents SDK method can silently fail on some SDK versions;
+ * individual Promise.all calls are more reliable and still fast.
+ */
 export async function embedBatch(
   texts: string[],
   taskType: EmbedTaskType,
 ): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const model = getEmbeddingModel();
-  const result = await model.batchEmbedContents({
-    requests: texts.map(
-      (t) => makeRequest(t, taskType),
-    ) as unknown as Parameters<typeof model.batchEmbedContents>[0]["requests"],
-  });
-  return result.embeddings.map((e) => e.values);
+  return Promise.all(texts.map((t) => embed(t, taskType)));
 }
 
 export function cosine(a: number[], b: number[]): number {

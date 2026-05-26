@@ -98,10 +98,13 @@ export function ruleBasedRerank(
     }
 
     const semanticPct = c.semantic_score * 100;
+
+    // Weights: semantic 50%, seniority 25%, domain 25% → sum to 100
+    // Then apply bonuses/penalties on top
     let final_score =
-      semanticPct * 0.4 +
-      seniority_score * 0.2 +
-      domain_score * 0.2 +
+      semanticPct * 0.50 +
+      seniority_score * 0.25 +
+      domain_score * 0.25 +
       seniority_penalty +
       domain_bonus;
 

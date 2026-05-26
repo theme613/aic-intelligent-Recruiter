@@ -502,10 +502,39 @@ export function parseRequiredSkills(skills: string): string[] {
     .filter(Boolean);
 }
 
+/** Heuristic: designer/UX title + strong React stack in body → hidden gem demo. */
+export function looksLikeHiddenGemResume(resumeText: string): boolean {
+  const head = resumeText.split("\n").slice(0, 4).join(" ").toLowerCase();
+  const body = resumeText.toLowerCase();
+  const designerTitle =
+    /\b(ui\/ux|ux\/ui|product designer|ui designer|ux designer|visual designer)\b/i.test(
+      head,
+    ) && !/\bfrontend\s+developer\b/i.test(head);
+  const strongFrontendStack =
+    (body.match(/\breact\b/g)?.length ?? 0) >= 1 &&
+    (body.match(/\btypescript\b/g)?.length ?? 0) >= 1 &&
+    /\bnext(\.js)?\b/i.test(body);
+  return designerTitle && strongFrontendStack;
+}
+
 export function resolveDemoResult(
-  candidate: { name: string },
+  candidate: { name: string; resumeText?: string },
   index: number,
 ): CandidateAnalysis {
+  if (candidate.resumeText && looksLikeHiddenGemResume(candidate.resumeText)) {
+    const gemTemplate =
+      demoMock.find((m) => m.isHiddenGem) ?? demoMock[1];
+    return {
+      ...gemTemplate,
+      name: candidate.name || gemTemplate.name,
+      currentTitle: "Product Designer",
+      hiddenGemStory: `Title said Product Designer. Work said Frontend Developer. We promoted them.`,
+      summary: `Title said Product Designer. Work said Frontend Developer. We promoted them.`,
+      factCheck: jordanFactCheck,
+      trustSignals: jordanTrust,
+    };
+  }
+
   const mock =
     demoMock.find(
       (m) => m.name.toLowerCase() === candidate.name.toLowerCase(),

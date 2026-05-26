@@ -1,8 +1,10 @@
 # AI Intelligent Recruiter
 
-An intelligent recruitment web application that ingests a job description and candidate resumes, then uses a **7-step AI agent pipeline** (Google Gemini) to rank candidates, detect **hidden gems**, and generate personalized pitches, skills-gap analysis, and outreach drafts.
+An intelligent recruitment web application for **hiring teams**. It ingests a job description and a pool of resumes, then runs a **9-step orchestrated AI pipeline** (Google Gemini + external verification APIs) to rank candidates, **verify claims**, detect **hidden gems**, and generate recruiter-ready outputs: fit summaries, gap analysis, **interview questions to ask**, trust signals, and outreach drafts.
 
 Built for the **APU AIC** hackathon.
+
+> **Architecture note:** This is a **single orchestrator** running a fixed multi-step workflow — not a multi-agent system (no separate agents delegating to each other).
 
 ---
 
@@ -16,13 +18,51 @@ Built for the **APU AIC** hackathon.
 
 | Feature | Description |
 |---------|-------------|
-| **Job intake** | Title, company, required skills, experience level, full job description |
+| **Job intake** | Title, company, skills, experience level, full job description |
 | **Resume upload** | Drag-and-drop **PDF**, **TXT**, **DOCX**; manual text paste |
-| **7-step AI pipeline** | Parse JD → parse candidates → vector search → rerank → hidden-gem detection → pitches → outreach |
-| **Hidden Gem Detector** | Surfaces strong candidates whose titles do not match the role (e.g. designer with React skills) |
+| **9-step AI pipeline** | Parse JD → parse resumes → GitHub verify → fact check → semantic rank → rule rerank → hidden gems → pitches → outreach |
+| **GitHub trust signals** | Fetches public repos/languages/activity; cross-checks claimed skills (✅ / ⚠️ / ❌) |
+| **Fact check** | AI consistency scan + employer lookup via Clearbit (contact links when unknown) |
+| **Hidden Gem Detector** | Promotes strong candidates missed by title/keyword bias (e.g. designer with React production work) |
+| **Recruiter interview guide** | Probing questions for **HR to ask the candidate** (not coaching for applicants) |
 | **Streaming results** | Live reasoning log and progressive candidate cards |
-| **Demo mode** | Full UI flow without an API key using built-in sample data |
+| **Demo mode** | Full UI without `GEMINI_API_KEY` using built-in sample data |
 | **Export** | Download ranked results as JSON |
+
+---
+
+## vs Traditional ATS
+
+| Traditional ATS / Job Board | RecruitAI Agent |
+|-----------------------------|-----------------|
+| Keyword filter only | Semantic AI understanding |
+| HR reads 100 resumes manually | Top 5 shortlisted in seconds |
+| No claim verification | GitHub + fact-check trust signals |
+| Rejects non-traditional candidates | Hidden gem detection |
+| Generic accept/reject | Personalised "Why this person" pitch |
+| No outreach help | LinkedIn message drafted instantly |
+
+---
+
+## Agent pipeline (9 steps)
+
+Flow: **`1 → 2 → 2.5 → 2.6 → 3 → 4 → 5 → 6 → 7`**
+
+Steps **2**, **2.5**, and **2.6** each process **all candidates in parallel** (`Promise.all`). Those three steps run **sequentially** (not in parallel with each other).
+
+| Step | Name | What it does | Technology |
+|------|------|--------------|------------|
+| **1** | Parse JD | Extract role, skills, seniority, constraints, title keywords | Gemini 2.0 Flash |
+| **2** | Parse candidates | Normalize each resume to structured JSON | Gemini 2.0 Flash (parallel) |
+| **2.5** | GitHub enrichment & trust signals | Extract profile URLs → fetch repos/languages/activity → trust signals | GitHub REST API (no auth) |
+| **2.6** | Fact check | Resume consistency scan + employer verification | Gemini 2.0 Flash + Clearbit API |
+| **3** | Vector search | Embed JD vs candidates → cosine semantic score | text-embedding-004 |
+| **4** | Rule-based rerank | Hard constraints, seniority/domain weights, final score | TypeScript |
+| **5** | Hidden gem detection | Promote title-mismatch but strong-fit candidates into top 5 | Gemini 2.5 Pro |
+| **6** | Generate pitches | Fit summary, gap analysis, **questions for interviewer**, 5-dimension scores | Gemini 2.5 Flash |
+| **7** | Draft outreach | Personalized message per shortlisted candidate | Gemini 2.5 Flash |
+
+**Output:** Ranked shortlist (≤5) + reasoning log + trust signals + fact-check report + pitches + outreach (streamed to UI).
 
 ---
 
@@ -35,7 +75,7 @@ Built for the **APU AIC** hackathon.
 | **OS** | Windows 10+, macOS 12+, or Linux |
 | **RAM** | 4 GB+ for local development |
 | **Disk** | ~500 MB for `node_modules` |
-| **Browser** | Modern Chromium, Firefox, or Safari (for UI) |
+| **Browser** | Modern Chromium, Firefox, or Safari |
 | **Internet** | Required for Gemini API calls (not required for demo mode) |
 
 ### Optional (for deployment)
@@ -47,26 +87,20 @@ Built for the **APU AIC** hackathon.
 
 ## Dependencies
 
-### Runtime (`package.json`)
+### Runtime
 
 | Package | Purpose |
 |---------|---------|
-| [Next.js](https://nextjs.org/) 16 | App framework (App Router, API routes) |
+| [Next.js](https://nextjs.org/) 16 | App Router, API routes, deployment |
 | [React](https://react.dev/) 19 | UI |
 | [@google/generative-ai](https://www.npmjs.com/package/@google/generative-ai) | Google Gemini SDK |
 | [unpdf](https://www.npmjs.com/package/unpdf) | PDF text extraction (serverless-safe) |
-| [mammoth](https://www.npmjs.com/package/mammoth) | DOCX text extraction (client-side) |
-| [Tailwind CSS](https://tailwindcss.com/) 4 | Styling |
-| [shadcn/ui](https://ui.shadcn.com/) + Base UI | UI components |
+| [mammoth](https://www.npmjs.com/package/mammoth) | DOCX parsing (client-side) |
+| [Tailwind CSS](https://tailwindcss.com/) 4 + [shadcn/ui](https://ui.shadcn.com/) | Styling & components |
 
 ### Development
 
-| Package | Purpose |
-|---------|---------|
-| TypeScript 5 | Type checking |
-| ESLint + `eslint-config-next` | Linting |
-
-Install all dependencies with:
+TypeScript 5, ESLint, `eslint-config-next`
 
 ```bash
 npm install
@@ -74,109 +108,107 @@ npm install
 
 ---
 
-## Installation, Configuration & Local Run
+## Installation, configuration & local run
 
-Follow these steps in order from the project root.
-
-### Step 1 — Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/theme613/aic-intelligent-Recruiter.git
 cd aic-intelligent-Recruiter
 ```
 
-### Step 2 — Install dependencies
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-This installs Next.js, React, Gemini SDK, PDF/DOCX parsers, and UI libraries into `node_modules/`.
+### 3. Configure environment variables
 
-### Step 3 — Configure environment variables
+```bash
+cp .env.example .env.local
+```
 
-1. Copy the example env file:
+Windows (PowerShell):
 
-   ```bash
-   cp .env.example .env.local
-   ```
+```powershell
+Copy-Item .env.example .env.local
+```
 
-   On Windows (PowerShell):
+Edit `.env.local`:
 
-   ```powershell
-   Copy-Item .env.example .env.local
-   ```
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-2. Open `.env.local` and set your Gemini API key:
+Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
 
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
+> **Security:** Never commit `.env.local`. Only `.env.example` (placeholders) belongs in git.
 
-3. Obtain a key (free tier available) from [Google AI Studio](https://aistudio.google.com/apikey).
+> **Demo without a key:** Leave `GEMINI_API_KEY` empty. On `/recruit`, click **LOAD DEMO**, then **Analyze Candidates**.
 
-> **Security:** Never commit `.env.local`. It is listed in `.gitignore`. Only `.env.example` (with placeholders) belongs in git.
-
-> **Demo without a key:** Leave `GEMINI_API_KEY` empty or omit it. Use **LOAD DEMO** on the recruit dashboard, then **Analyze Candidates** — the app runs the built-in mock pipeline.
-
-### Step 4 — Run the development server
+### 4. Run the development server
 
 ```bash
 npm run dev
 ```
 
-### Step 5 — Open the application
+### 5. Open the application
 
 | Page | URL |
 |------|-----|
 | Home | [http://localhost:3000](http://localhost:3000) |
 | Recruitment workspace | [http://localhost:3000/recruit](http://localhost:3000/recruit) |
 
-### Step 6 — Use the app (quick walkthrough)
+### 6. Quick walkthrough
 
-1. Go to **http://localhost:3000/recruit**.
-2. **JOB tab** — Fill in job title, company, skills, experience level, and job description → **Continue to Upload**.
-3. **UPLOAD tab** — Upload resumes (PDF / TXT / DOCX) or paste text → **Analyze Candidates**.
-4. **RESULTS tab** — View ranked candidates, hidden-gem badges, reasoning log, and export JSON.
+1. **JOB** — Enter role details and job description → continue to upload.
+2. **UPLOAD** — Add resumes (PDF / TXT / DOCX) or paste text → **Analyze Candidates**.
+3. **RESULTS** — Review ranked cards with:
+   - Match score and 5-dimension breakdown
+   - **Trust signals** (GitHub-verified skills, activity)
+   - **Fact check** (consistency flags, employer verification)
+   - **Interview questions** — scripts for the hiring team to ask in interview
+   - Outreach draft (copy for LinkedIn/email)
 
-**Shortcut:** Click **LOAD DEMO** in the header to pre-fill a sample job and four resumes, then analyze.
+**Shortcut:** **LOAD DEMO** pre-fills a sample job and four candidates.
 
 ---
 
-## Available Scripts
+## Available scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server (hot reload) |
+| `npm run dev` | Development server (hot reload) |
 | `npm run build` | Production build |
-| `npm run start` | Run production build locally (run `build` first) |
-| `npm run lint` | Run ESLint |
+| `npm run start` | Run production build (run `build` first) |
+| `npm run lint` | ESLint |
 
 ---
 
-## Environment Variables
+## Environment variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | No* | Google Gemini API key for live AI analysis |
+| `GEMINI_API_KEY` | No* | Google Gemini API key for live analysis |
 
-\*Required only for real (non-demo) analysis. Demo mode works without it.
+\*Required only for real (non-demo) runs.
 
 ---
 
 ## Deploy to Vercel
 
-1. Push the repository to GitHub.
-2. Import the project at [vercel.com/new](https://vercel.com/new).
-3. Add environment variable: `GEMINI_API_KEY` = your key.
+1. Push to GitHub.
+2. Import at [vercel.com/new](https://vercel.com/new).
+3. Set `GEMINI_API_KEY` in project environment variables.
 4. Deploy.
 
-`vercel.json` configures serverless function timeouts:
+`vercel.json` function timeouts:
 
 - `/api/analyze` — 60 seconds
 - `/api/parse-pdf` — 30 seconds
 
-> **Note:** Vercel **Hobby** plans limit function duration to ~10 seconds. Long Gemini runs may time out; use **demo mode** on Hobby or upgrade to **Pro** for 60s functions.
+> **Hobby plan:** Serverless functions are capped at ~10s. Long Gemini runs may time out — use **demo mode** or upgrade to **Pro** for 60s functions.
 
 ---
 
@@ -187,45 +219,73 @@ Browser (React)
   /              → Marketing home
   /recruit       → Dashboard (Job → Upload → Results)
 
-API routes (Node.js serverless)
+API routes (Node.js)
   POST /api/parse-pdf   → unpdf text extraction
-  POST /api/analyze     → NDJSON stream (7-step agent or demo)
+  POST /api/analyze     → NDJSON stream (pipeline or demo)
 
-Agent pipeline (when GEMINI_API_KEY is set)
-  Step 1  Parse job description        (Gemini 2.0 Flash)
-  Step 2  Parse candidate resumes      (Gemini 2.0 Flash, parallel)
-  Step 3  Vector / semantic search     (text-embedding-004)
-  Step 4  Rule-based rerank            (TypeScript)
-  Step 5  Hidden gem detection         (Gemini 2.5 Pro)
-  Step 6  Generate pitches             (Gemini 2.5 Flash)
-  Step 7  Draft outreach messages      (Gemini 2.5 Flash)
+Pipeline (src/lib/agent/orchestrator.ts)
+  runAgent() → steps 1–7 + 2.5 + 2.6 → stream events to UI
 ```
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 src/
   app/
-    page.tsx                    # Home
-    recruit/page.tsx            # Recruitment dashboard
+    page.tsx                      # Home
+    recruit/page.tsx              # Recruitment dashboard
     api/
-      analyze/route.ts          # AI analysis (streaming NDJSON)
-      parse-pdf/route.ts        # PDF text extraction
+      analyze/route.ts              # Streaming analysis
+      parse-pdf/route.ts            # PDF extraction
   components/
-    CandidateCard.tsx           # Result card + hidden gem UI
-    FileUpload.tsx              # Resume upload
-    JobForm.tsx                 # Job definition form
-    ResultsPanel.tsx            # Results, stats, reasoning log
+    CandidateCard.tsx               # Scores, trust signals, fact check, outreach
+    FileUpload.tsx
+    JobForm.tsx
+    ResultsPanel.tsx
     SiteHeader.tsx
   lib/
-    agent/                      # 7-step pipeline (orchestrator, steps 1–7)
-    demoData.ts                 # Demo job, resumes, mock scores
-    gemini.ts                   # API key helper
-    vector.ts                   # Local cosine similarity fallback
-    api-response.ts             # Safe JSON parsing for API errors
+    agent/
+      orchestrator.ts               # Pipeline controller
+      step1-parse-jd.ts
+      step2-parse-candidates.ts
+      github-enrichment.ts          # Step 2.5
+      fact-check.ts                 # Step 2.6
+      step3-vector-search.ts
+      step4-rerank.ts
+      step5-hidden-gem.ts
+      step6-pitches.ts
+      step7-outreach.ts
+      llm.ts                        # Per-step Gemini models
+      prompts.ts
+      types.ts
+    demoData.ts
+    gemini.ts                       # UI types + API key check
+    api-response.ts                 # Safe JSON error handling
 ```
+
+---
+
+## Testing fact check & trust signals
+
+Use resumes that exercise different paths:
+
+| Scenario | What to include | Expected result |
+|----------|-----------------|-----------------|
+| **Clean** | Real company names, consistent dates, `github.com/username` | High veracity, GitHub verified |
+| **Timeline bug** | "8 years experience" + graduated 2023 | Consistency warning |
+| **Fake employer** | Fictional company (e.g. "Zorblax Digital") | Employer **not found** — manual verify link |
+| **No GitHub** | Strong skills, no profile URL | "No public GitHub found" |
+| **Hidden gem** | Title "Designer" + React/Next.js project bullets + GitHub | Hidden gem promotion + trust signals |
+
+**Resume format tip** (helps employer extraction):
+
+```
+Job Title — Company Name (2020–2024)
+```
+
+Use en-dash in dates: `2020–Present`.
 
 ---
 
@@ -234,19 +294,20 @@ src/
 | Issue | Solution |
 |-------|----------|
 | `GEMINI_API_KEY is not configured` | Copy `.env.example` → `.env.local`, add key, restart `npm run dev` |
-| `API key expired` / `API_KEY_INVALID` | Create a new key at [Google AI Studio](https://aistudio.google.com/apikey) |
-| `Unexpected token '<'` after deploy | API returned HTML (404/timeout). Check Vercel logs; use demo mode on Hobby tier |
-| PDF upload fails on Vercel | Redeploy with latest code (`unpdf` replaces `pdf-parse`) |
-| Scanned PDF has no text | Use TXT/DOCX or paste resume text manually |
+| `API key expired` / `API_KEY_INVALID` | New key from [Google AI Studio](https://aistudio.google.com/apikey) |
+| `Unexpected token '<'` after deploy | API returned HTML (404/timeout). Check Vercel logs; try demo mode on Hobby |
+| PDF upload fails on Vercel | Ensure latest code uses `unpdf` (not `pdf-parse`) |
+| Scanned PDF has no text | Use TXT/DOCX or paste text manually |
+| GitHub shows no data | Profile must be public; URL must be `github.com/username` on resume |
+| Employer not found | Expected for fictional companies — use fact-check contact guidance |
 
 ---
 
 ## Team
 
-| Name | 
+| Name |
 |------|
-| Raymond | 
-
+| Raymond |
 
 ---
 

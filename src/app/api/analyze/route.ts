@@ -2,7 +2,7 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 import { formatGeminiError } from "@/lib/gemini-errors";
 import {
   demoJobRequirements,
-  DEMO_HIDDEN_GEM_NAME,
+  looksLikeHiddenGemResume,
   resolveDemoResult,
 } from "@/lib/demoData";
 import { runAgent } from "@/lib/agent/orchestrator";
@@ -66,18 +66,11 @@ export async function POST(request: Request) {
 
         try {
           if (useDemo) {
-            const titleMismatches = candidates.filter((c) => {
-              const t = c.name.toLowerCase();
-              return (
-                t.includes("jordan") ||
-                t.includes("david") ||
-                c.name === "Jordan Kim"
-              );
-            }).length;
-            const hasJordan = candidates.some(
-              (c) =>
-                c.name.toLowerCase() === DEMO_HIDDEN_GEM_NAME.toLowerCase(),
+            const hiddenGemCandidates = candidates.filter((c) =>
+              looksLikeHiddenGemResume(c.resumeText),
             );
+            const titleMismatches = hiddenGemCandidates.length;
+            const hasHiddenGem = hiddenGemCandidates.length > 0;
 
             emit({
               type: "log",
@@ -97,7 +90,7 @@ export async function POST(request: Request) {
             await demoDelay(200);
             emit({
               type: "log",
-              message: `Step 3 complete: ${candidates.length} candidates ranked, ${hasJordan ? 1 : 0} flagged as potential hidden gems`,
+              message: `Step 3 complete: ${candidates.length} candidates ranked, ${hasHiddenGem ? hiddenGemCandidates.length : 0} flagged as potential hidden gems`,
             });
             await demoDelay(200);
             emit({
@@ -105,7 +98,7 @@ export async function POST(request: Request) {
               message: `Step 4 complete: reranked with rules, 2 flags applied`,
             });
             await demoDelay(300);
-            const promoted = hasJordan ? [DEMO_HIDDEN_GEM_NAME] : [];
+            const promoted = hiddenGemCandidates.map((c) => c.name);
             emit({
               type: "hidden_gems",
               promoted,
@@ -122,8 +115,17 @@ export async function POST(request: Request) {
             });
 
             const results = candidates
-              .map((c, i) => resolveDemoResult(c, i))
-              .sort((a, b) => b.score - a.score);
+              .map((c, i) =>
+                resolveDemoResult(
+                  { name: c.name, resumeText: c.resumeText },
+                  i,
+                ),
+              )
+              .sort((a, b) => {
+                if (a.isHiddenGem && !b.isHiddenGem) return -1;
+                if (!a.isHiddenGem && b.isHiddenGem) return 1;
+                return b.score - a.score;
+              });
 
             for (const result of results) {
               emit({ type: "candidate", result });

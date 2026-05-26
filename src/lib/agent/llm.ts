@@ -58,7 +58,7 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a senior recruiter specializing in finding hidden gems — candidates unfairly ranked low due to title mismatch whose work evidence strongly matches the JD. Return ONLY valid JSON.",
   },
   pitch: {
-    model: "gemini-2.5-flash-preview-05-20",
+    model: "gemini-2.5-flash",
     temperature: 0.7,
     maxTokens: 1500,
     responseMimeType: "application/json",
@@ -66,7 +66,7 @@ const TASKS: Record<Task, TaskConfig> = {
       "You are a senior technical recruiter. Write human, specific narratives that cite resume evidence. Return ONLY valid JSON.",
   },
   outreach: {
-    model: "gemini-2.5-flash-preview-05-20",
+    model: "gemini-2.5-flash",
     temperature: 0.8,
     maxTokens: 600,
     systemInstruction:

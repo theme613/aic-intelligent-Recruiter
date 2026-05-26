@@ -144,46 +144,7 @@ export async function hiddenGemDetection(
       hiddenGemsFound: promotedNames.length,
     };
   } catch (err) {
-    console.error("[agent.step5] hidden gem detection failed:", err);
-    // Fallback: auto-promote strongest potential gem for demo resilience
-    const bestGem = [...potentialGems].sort(
-      (a, b) => b.semantic_score - a.semantic_score,
-    )[0];
-    if (!bestGem || topNames.has(bestGem.name.toLowerCase())) {
-      return { shortlist: top5, promoted: [], hiddenGemsFound: 0 };
-    }
-
-    const reason = `Ranked low because title says ${bestGem.current_title}, but promoted because semantic match (${(bestGem.semantic_score * 100).toFixed(0)}%) and project evidence align with ${jd.role_title}`;
-    const promoted: ScoredCandidate = {
-      ...bestGem,
-      is_hidden_gem: true,
-      hidden_gem_reason: reason,
-      hidden_gem_story: buildHiddenGemStory(
-        bestGem.current_title,
-        reason,
-        jd.role_title,
-      ),
-      flags: [...bestGem.flags, "hidden_gem"],
-    };
-
-    let shortlist = [...top5];
-    if (shortlist.length >= shortlistSize) {
-      const lowestIdx = shortlist.reduce(
-        (minI, c, i, arr) =>
-          !c.is_hidden_gem && c.final_score < arr[minI].final_score ? i : minI,
-        0,
-      );
-      shortlist[lowestIdx] = promoted;
-    } else {
-      shortlist.push(promoted);
-    }
-
-    shortlist = shortlist.sort((a, b) => b.final_score - a.final_score);
-
-    return {
-      shortlist,
-      promoted: [bestGem.name],
-      hiddenGemsFound: 1,
-    };
+    console.error("[agent.step5] hidden gem detection failed — returning top candidates without promotion:", err);
+    return { shortlist: top5, promoted: [], hiddenGemsFound: 0 };
   }
 }
