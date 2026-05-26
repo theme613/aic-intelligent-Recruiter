@@ -3,7 +3,14 @@ import { withRetry } from "./retry";
 
 export type EmbedTaskType = "RETRIEVAL_QUERY" | "RETRIEVAL_DOCUMENT";
 
-/** Single embedding via text-embedding-004 with retry on 429. */
+/**
+ * Single embedding via Gemini's embedding model, retrying on 429.
+ *
+ * The circuit-breaker key is passed so that once Gemini's daily embedding
+ * quota is exhausted, subsequent calls in the same process throw
+ * immediately (no 20+ second wait) and the caller falls back to
+ * `skillOverlapScore` cleanly.
+ */
 export async function embed(
   text: string,
   taskType: EmbedTaskType,
@@ -16,6 +23,7 @@ export async function embed(
         taskType,
       } as Parameters<typeof model.embedContent>[0]),
     "embed",
+    "gemini:gemini-embedding-001",
   );
   return result.embedding.values;
 }

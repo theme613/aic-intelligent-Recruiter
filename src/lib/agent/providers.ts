@@ -211,6 +211,11 @@ export function activeProviderNames(): string[] {
   return PROVIDER_CHAIN.filter((p) => p.available()).map((p) => p.name);
 }
 
+/** True when at least one LLM provider key is set (Gemini, Groq, Mistral, or OpenRouter). */
+export function hasLlmProvider(): boolean {
+  return activeProviderNames().length > 0;
+}
+
 /**
  * Generate text via the provider chain. Tries each available provider in
  * order; trips the provider's circuit breaker on 429/503 and falls through

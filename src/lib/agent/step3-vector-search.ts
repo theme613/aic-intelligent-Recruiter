@@ -1,19 +1,44 @@
 import { cosine, embedBatch } from "./embeddings";
 import type { Candidate, JobRequirements, ScoredCandidate } from "./types";
 
-const HIDDEN_GEM_SEMANTIC_THRESHOLD = 0.75;
+/**
+ * Cosine-similarity threshold above which a title-mismatched candidate is
+ * flagged as a *potential* hidden gem (Step 5 makes the final decision).
+ *
+ * Real embeddings typically land 0.65–0.90 for relevant resumes. The
+ * skill-overlap fallback used when Gemini's embedding quota is exhausted
+ * maxes around 0.85 but more commonly sits 0.4–0.7. We set the gate at
+ * 0.55 so both paths can flag genuinely strong title-mismatched candidates
+ * — Step 5 is strict enough that occasional false positives are filtered.
+ */
+const HIDDEN_GEM_SEMANTIC_THRESHOLD = 0.55;
+
+/** Normalize a skill string for fuzzy matching: lowercased, strip dots /
+ *  hyphens / spaces / underscores so "node.js", "node-js", "nodejs" all
+ *  become "nodejs". */
+function normalizeSkill(s: string): string {
+  return s.toLowerCase().replace(/[.\-_\s]+/g, "");
+}
 
 /**
- * Fallback when embeddings fail: simple skill-overlap ratio between
- * JD hard_skills and candidate skills (Jaccard-style, 0–1).
- * Prevents everyone from getting the same 28% floor score.
+ * Fallback when embeddings fail: skill-overlap ratio between JD hard_skills
+ * and candidate skills, with synonym-tolerant matching. Prevents everyone
+ * from getting the same 28% floor score.
+ *
+ * A JD skill matches if any candidate skill, after normalisation, equals it
+ * or contains it as a whole token (so "react native" still counts as a
+ * match for a JD skill of "react").
  */
 function skillOverlapScore(c: Candidate, jd: JobRequirements): number {
   if (jd.hard_skills.length === 0) return 0.3;
-  const cSkills = new Set(c.skills.map((s) => s.toLowerCase()));
-  const matched = jd.hard_skills.filter((s) =>
-    cSkills.has(s.toLowerCase()),
-  ).length;
+  const cSkillsNormalized = c.skills.map((s) => normalizeSkill(s));
+  const matched = jd.hard_skills.filter((jdSkill) => {
+    const norm = normalizeSkill(jdSkill);
+    if (norm.length === 0) return false;
+    return cSkillsNormalized.some(
+      (cs) => cs === norm || cs.includes(norm) || norm.includes(cs),
+    );
+  }).length;
   // Weighted: matched / total JD skills, scaled to 0.2–0.85 range
   return 0.2 + (matched / jd.hard_skills.length) * 0.65;
 }

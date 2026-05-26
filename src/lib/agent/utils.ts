@@ -29,6 +29,7 @@ export function computeTitleMatchFlag(
   currentTitle: string,
   titleKeywords: string[],
 ): boolean {
+  if (!currentTitle.trim()) return false;
   if (titleKeywords.length === 0) return true;
   const t = currentTitle.toLowerCase();
 
@@ -43,6 +44,49 @@ export function computeTitleMatchFlag(
     const k = kw.toLowerCase().trim();
     return k.length > 2 && t.includes(k);
   });
+}
+
+/**
+ * Pull the title the candidate wrote on their resume (not the LLM's summary
+ * interpretation). Hidden-gem detection depends on this being accurate.
+ */
+export function extractResumeHeadlineTitle(rawResume: string): string | null {
+  const labeled = rawResume.match(
+    /(?:current\s+title|present\s+role|position)\s*[:\n]+\s*([^\n]+)/i,
+  );
+  if (labeled?.[1]?.trim()) return labeled[1].trim();
+
+  // "Senior Frontend Engineer — Acme (2021 – Present)"
+  const roleDash = rawResume.match(
+    /(?:^|\n)([A-Za-z][^\n]{4,70}?)\s*(?:—|–|-)\s*[A-Z][^\n(]{2,55}\s*\(\s*\d{4}/m,
+  );
+  if (roleDash?.[1]?.trim()) return roleDash[1].trim();
+
+  return null;
+}
+
+/**
+ * Conservative title-bias flag for hidden-gem detection.
+ *
+ * LLM parsers often copy aspirational text from the SUMMARY ("self-taught
+ * full-stack developer") into `current_title`, which makes `title_match_flag`
+ * true and kills hidden-gem detection. When the resume has an explicit
+ * headline title that disagrees with the parsed title, BOTH must match the JD
+ * for us to consider the title aligned.
+ */
+export function resolveTitleMatchFlag(
+  parsedTitle: string,
+  rawResume: string,
+  titleKeywords: string[],
+): boolean {
+  const headline = extractResumeHeadlineTitle(rawResume);
+  const parsedMatches = computeTitleMatchFlag(parsedTitle, titleKeywords);
+  if (!headline) return parsedMatches;
+  if (headline.toLowerCase().trim() === parsedTitle.toLowerCase().trim()) {
+    return parsedMatches;
+  }
+  const headlineMatches = computeTitleMatchFlag(headline, titleKeywords);
+  return parsedMatches && headlineMatches;
 }
 
 /** Derive title keywords from role title when the LLM omits them. */

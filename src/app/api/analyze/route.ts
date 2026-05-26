@@ -1,4 +1,4 @@
-import { hasGeminiApiKey } from "@/lib/gemini";
+import { hasLlmProvider } from "@/lib/agent/providers";
 import { formatGeminiError } from "@/lib/gemini-errors";
 import {
   demoJobRequirements,
@@ -54,7 +54,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const useDemo = demoMode || !hasGeminiApiKey();
+    // Demo only when explicitly requested or no LLM keys at all.
+    // (Previously keyed only on GEMINI_API_KEY — Groq/Mistral users still got demo.)
+    const useDemo = demoMode === true || !hasLlmProvider();
 
     const stream = new ReadableStream({
       async start(controller) {

@@ -2,16 +2,20 @@ import { PROMPT_PARSE_CANDIDATE } from "./prompts";
 import { generateText, parseJson } from "./llm";
 import { mapConcurrent } from "./retry";
 import type { Candidate, JobRequirements } from "./types";
-import { computeTitleMatchFlag } from "./utils";
+import {
+  extractResumeHeadlineTitle,
+  resolveTitleMatchFlag,
+} from "./utils";
 
 function fallback(
   resumeText: string,
   hintName?: string,
   titleKeywords: string[] = [],
 ): Candidate {
+  const headline = extractResumeHeadlineTitle(resumeText);
   return {
     name: hintName ?? "Unknown Candidate",
-    current_title: "",
+    current_title: headline ?? "",
     years_experience: 0,
     skills: [],
     top_projects: [],
@@ -19,7 +23,7 @@ function fallback(
     seniority_signals: [],
     education: "",
     raw_resume: resumeText,
-    title_match_flag: true,
+    title_match_flag: resolveTitleMatchFlag("", resumeText, titleKeywords),
   };
 }
 
@@ -44,7 +48,8 @@ async function parseOne(
       text,
     );
 
-    const current_title = parsed.current_title ?? "";
+    const headline = extractResumeHeadlineTitle(resumeText);
+    const current_title = headline ?? parsed.current_title ?? "";
     return {
       name: parsed.name || hintName || "Unknown Candidate",
       current_title,
@@ -60,8 +65,9 @@ async function parseOne(
       seniority_signals: parsed.seniority_signals ?? [],
       education: parsed.education ?? "",
       raw_resume: resumeText,
-      title_match_flag: computeTitleMatchFlag(
-        current_title,
+      title_match_flag: resolveTitleMatchFlag(
+        parsed.current_title ?? "",
+        resumeText,
         jd.title_keywords,
       ),
     };

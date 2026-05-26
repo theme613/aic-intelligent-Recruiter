@@ -63,22 +63,43 @@ export const PROMPT_HIDDEN_GEM_DETECTION = (params: {
   potentialGemsJson: string;
 }) => `You are a senior recruiter reviewing an AI-generated candidate shortlist.
 
-Here is the job description requirements:
+A "hidden gem" is a candidate whose **current job title looks unrelated** to
+the role but whose **work evidence** (projects, skills, ownership signals)
+strongly matches the JD. Without a human reviewer, automated rankers miss
+these people because they were filtered by title — exactly the bias you are
+here to correct.
+
+JOB DESCRIPTION:
 ${params.jdJson}
 
-Here is the current top 5 shortlist:
+CURRENT TOP SHORTLIST (already selected by the ranker):
 ${params.top5Json}
 
-Here are candidates who were ranked LOWER but flagged because their work evidence strongly matches the JD despite having a different job title:
+CANDIDATES FLAGGED AS POTENTIAL HIDDEN GEMS (title looks off, work evidence
+strong). NOTE: some of these may already be in the shortlist above — that's
+fine, promoting them simply marks them as a confirmed hidden gem with a
+narrative explaining why their title misled the ranker.
 ${params.potentialGemsJson}
 
 Your task:
-1. For each flagged candidate, decide: should they be promoted into the shortlist? Answer YES or NO with a one-sentence reason.
-2. If YES, specify which current top-5 candidate they should replace (if any), or if they should be added as an additional recommendation (add_additional: true).
-3. For each promoted candidate, write their "Hidden Gem" reason in this format:
-   "Ranked low because title says X, but promoted because Y specific evidence"
+1. For EACH flagged candidate, decide independently: is the work evidence
+   strong enough to warrant the "Hidden Gem" label for the JD? Answer YES
+   or NO with a one-sentence reason citing SPECIFIC evidence from their
+   resume (a project, a stack, a measurable outcome).
+2. If YES and the candidate is NOT yet in the shortlist, decide whether to
+   replace a specific shortlist candidate or add as an additional pick
+   (set add_additional: true). If YES and they ARE already in the shortlist,
+   simply set promote: true and leave replace_candidate null — we will
+   re-mark them in place as a hidden gem.
+3. For each promoted candidate write their hidden_gem_reason in this exact
+   format: "Ranked low because title says X, but promoted because Y" where
+   X is their current title and Y is the specific evidence.
 
-Be strict — only promote if the evidence is genuinely strong. Traditional keyword tools would have missed these people.
+Be selective but not stingy. The whole point of this step is to surface
+candidates traditional keyword tools would have missed — when the evidence
+is concrete (shipped code, OSS contribution, measurable outcome) and the
+title is genuinely misleading (e.g. "QA Tester" who ships React features in
+production), promote them.
 
 Return JSON exactly:
 {
@@ -94,7 +115,8 @@ Return JSON exactly:
   ]
 }
 
-Return empty promoted_gems array if no one should be promoted.`;
+Return an empty promoted_gems array ONLY if no flagged candidate has
+genuine work evidence for the role.`;
 
 export const PROMPT_PITCH = (params: {
   jobJson: string;

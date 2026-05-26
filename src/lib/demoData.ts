@@ -502,19 +502,28 @@ export function parseRequiredSkills(skills: string): string[] {
     .filter(Boolean);
 }
 
-/** Heuristic: designer/UX title + strong React stack in body → hidden gem demo. */
+/**
+ * Heuristic for demo mode only — mirrors live hidden-gem signals:
+ * non-engineering headline title + strong eng stack in the body.
+ */
 export function looksLikeHiddenGemResume(resumeText: string): boolean {
-  const head = resumeText.split("\n").slice(0, 4).join(" ").toLowerCase();
+  const head = resumeText.split("\n").slice(0, 8).join(" ").toLowerCase();
   const body = resumeText.toLowerCase();
-  const designerTitle =
-    /\b(ui\/ux|ux\/ui|product designer|ui designer|ux designer|visual designer)\b/i.test(
+  const misleadingTitle =
+    (/\b(ui\/ux|ux\/ui|product designer|ui designer|ux designer|visual designer)\b/i.test(
       head,
-    ) && !/\bfrontend\s+developer\b/i.test(head);
-  const strongFrontendStack =
+    ) &&
+      !/\bfrontend\s+developer\b/i.test(head)) ||
+    /\b(customer support|help desk|support specialist|service desk|qa tester|quality assurance)\b/i.test(
+      head,
+    );
+  const strongEngStack =
     (body.match(/\breact\b/g)?.length ?? 0) >= 1 &&
     (body.match(/\btypescript\b/g)?.length ?? 0) >= 1 &&
-    /\bnext(\.js)?\b/i.test(body);
-  return designerTitle && strongFrontendStack;
+    (/\bnext(\.js)?\b/i.test(body) ||
+      /\bnode(\.js)?\b/i.test(body) ||
+      /\bpostgres\b/i.test(body));
+  return misleadingTitle && strongEngStack;
 }
 
 export function resolveDemoResult(
