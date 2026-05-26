@@ -139,13 +139,24 @@ Edit `.env.local`:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional fallback providers — used automatically when Gemini is rate-limited
+GROQ_API_KEY=
+MISTRAL_API_KEY=
+OPENROUTER_API_KEY=
 ```
 
-Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
+Get keys from:
+- [Google AI Studio](https://aistudio.google.com/apikey) — Gemini
+- [Groq Console](https://console.groq.com/keys) — Groq (recommended fallback, very generous free tier)
+- [Mistral Console](https://console.mistral.ai/api-keys) — Mistral AI
+- [OpenRouter](https://openrouter.ai/keys) — aggregator with free models
+
+The pipeline tries providers in order **Gemini → Groq → Mistral → OpenRouter** and falls through automatically on rate-limit / quota errors. Only Gemini is strictly required; the others act as resilience.
 
 > **Security:** Never commit `.env.local`. Only `.env.example` (placeholders) belongs in git.
 
-> **Demo without a key:** Leave `GEMINI_API_KEY` empty. On `/recruit`, click **LOAD DEMO**, then **Analyze Candidates**.
+> **Demo without a key:** Leave all provider keys empty. On `/recruit`, click **LOAD DEMO**, then **Analyze Candidates**.
 
 ### 4. Run the development server
 
@@ -190,9 +201,15 @@ npm run dev
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | No* | Google Gemini API key for live analysis |
+| `GEMINI_API_KEY` | No* | Google Gemini API key — primary provider |
+| `GROQ_API_KEY` | No | Groq API key — fallback provider, very fast inference |
+| `MISTRAL_API_KEY` | No | Mistral AI API key — fallback provider |
+| `OPENROUTER_API_KEY` | No | OpenRouter API key — final fallback (aggregator) |
+| `OPENROUTER_REFERER` | No | OpenRouter analytics: site URL (optional) |
+| `OPENROUTER_TITLE` | No | OpenRouter analytics: site title (optional) |
+| `GEMINI_CONCURRENCY` | No | Max concurrent LLM calls. Default `1` (sequential) |
 
-\*Required only for real (non-demo) runs.
+\*Required only for real (non-demo) runs. The pipeline calls providers in the order `Gemini → Groq → Mistral → OpenRouter` and falls through automatically when one is rate-limited.
 
 ---
 

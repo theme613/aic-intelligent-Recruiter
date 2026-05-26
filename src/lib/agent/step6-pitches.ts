@@ -1,5 +1,5 @@
 import { PROMPT_PITCH } from "./prompts";
-import { generateWithRetry, getModel, parseJson } from "./llm";
+import { generateText, parseJson } from "./llm";
 import { mapConcurrent } from "./retry";
 import type {
   JobRequirements,
@@ -67,7 +67,6 @@ async function generatePitch(
   jd: JobRequirements,
 ): Promise<PitchResponse> {
   try {
-    const model = getModel("pitch");
     const prompt = PROMPT_PITCH({
       jobJson: JSON.stringify(
         {
@@ -98,8 +97,8 @@ async function generatePitch(
       isHiddenGem: c.is_hidden_gem,
     });
 
-    const result = await generateWithRetry(model, prompt, `step6:${c.name}`);
-    const parsed = parseJson<PitchResponse>(result.response.text());
+    const text = await generateText("pitch", prompt, `step6:${c.name}`);
+    const parsed = parseJson<PitchResponse>(text);
     const story =
       c.is_hidden_gem
         ? parsed.hidden_gem_story ||

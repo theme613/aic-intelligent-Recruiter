@@ -1,5 +1,5 @@
 import { PROMPT_PARSE_CANDIDATE } from "./prompts";
-import { generateWithRetry, getModel, parseJson } from "./llm";
+import { generateText, parseJson } from "./llm";
 import { mapConcurrent } from "./retry";
 import type { Candidate, JobRequirements } from "./types";
 import { computeTitleMatchFlag } from "./utils";
@@ -29,16 +29,19 @@ async function parseOne(
   hintName?: string,
 ): Promise<Candidate> {
   try {
-    const model = getModel("extract_candidate");
     const prompt = PROMPT_PARSE_CANDIDATE({
       hintName: hintName ?? "extract from resume",
       resumeText,
       titleKeywords: jd.title_keywords.join(", ") || jd.role_title,
     });
 
-    const result = await generateWithRetry(model, prompt, `step2:${hintName ?? "candidate"}`);
+    const text = await generateText(
+      "extract_candidate",
+      prompt,
+      `step2:${hintName ?? "candidate"}`,
+    );
     const parsed = parseJson<Omit<Candidate, "title_match_flag" | "raw_resume">>(
-      result.response.text(),
+      text,
     );
 
     const current_title = parsed.current_title ?? "";

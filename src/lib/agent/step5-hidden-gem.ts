@@ -1,5 +1,5 @@
 import { PROMPT_HIDDEN_GEM_DETECTION } from "./prompts";
-import { generateWithRetry, getModel, parseJson } from "./llm";
+import { generateText, parseJson } from "./llm";
 import type { JobRequirements, ScoredCandidate } from "./types";
 import { buildHiddenGemStory, jdSummary, summarizeCandidate } from "./utils";
 
@@ -45,8 +45,6 @@ export async function hiddenGemDetection(
   }
 
   try {
-    const model = getModel("hidden_gem");
-
     const prompt = PROMPT_HIDDEN_GEM_DETECTION({
       jdJson: jdSummary(jd),
       top5Json: JSON.stringify(top5.map(summarizeCandidate), null, 2),
@@ -57,8 +55,8 @@ export async function hiddenGemDetection(
       ),
     });
 
-    const result = await generateWithRetry(model, prompt, "step5:hidden_gem");
-    const parsed = parseJson<HiddenGemResponse>(result.response.text());
+    const text = await generateText("hidden_gem", prompt, "step5:hidden_gem");
+    const parsed = parseJson<HiddenGemResponse>(text);
     const decisions = (parsed.promoted_gems ?? []).filter(
       (g) => g.promote !== false && g.name,
     );

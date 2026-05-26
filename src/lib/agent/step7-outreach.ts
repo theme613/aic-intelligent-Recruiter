@@ -1,5 +1,5 @@
 import { PROMPT_OUTREACH } from "./prompts";
-import { generateWithRetry, getModel } from "./llm";
+import { generateText } from "./llm";
 import type { ScoredCandidate, JobRequirements } from "./types";
 
 function firstNameOf(name: string): string {
@@ -29,7 +29,6 @@ export async function generateOutreach(
   company: string,
 ): Promise<string> {
   try {
-    const model = getModel("outreach");
     const first = firstNameOf(candidate.name);
     const anchor =
       candidate.top_projects[0]?.summary ||
@@ -47,8 +46,9 @@ export async function generateOutreach(
       isHiddenGem: candidate.is_hidden_gem,
     });
 
-    const result = await generateWithRetry(model, prompt, `step7:${candidate.name}`);
-    let text = result.response.text().trim();
+    let text = (
+      await generateText("outreach", prompt, `step7:${candidate.name}`)
+    ).trim();
 
     if (candidate.is_hidden_gem && !text.toLowerCase().includes("almost missed")) {
       text = `I almost missed your profile — your title didn't match, but your work did. ${text}`;

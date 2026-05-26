@@ -30,28 +30,49 @@ const MAX_RETRY_DELAY_MS = 12000;
 // same model in this process for `TRIP_TTL_MS`. Callers' fallback paths
 // (template pitches, skill-overlap scoring, etc.) take over without delay.
 
-const TRIPPED_MODELS = new Map<string, number>(); // model → unix ms expiry
-const TRIP_TTL_MS = 60 * 60 * 1000; // 1 hour
+const TRIPPED_MODELS = new Map<string, number>(); // key → unix ms expiry
+/** Default trip duration for daily-quota failures (Gemini per-day caps). */
+const DAILY_TRIP_TTL_MS = 60 * 60 * 1000; // 1 hour
+/** Short trip duration for per-minute 429s on alternative providers. */
+export const MINUTE_TRIP_TTL_MS = 60 * 1000; // 60 seconds
 
-function isModelTripped(model: string | undefined): boolean {
-  if (!model) return false;
-  const expiry = TRIPPED_MODELS.get(model);
+/**
+ * Check whether a provider:model key is currently tripped.
+ * Keys are arbitrary strings — callers may prefix with provider name to avoid
+ * collisions (e.g. "gemini:gemini-2.5-flash", "groq:llama-3.3-70b-versatile").
+ */
+export function isModelTripped(key: string | undefined): boolean {
+  if (!key) return false;
+  const expiry = TRIPPED_MODELS.get(key);
   if (!expiry) return false;
   if (Date.now() > expiry) {
-    TRIPPED_MODELS.delete(model);
+    TRIPPED_MODELS.delete(key);
     return false;
   }
   return true;
 }
 
-function tripModel(model: string, reason: string): void {
-  TRIPPED_MODELS.set(model, Date.now() + TRIP_TTL_MS);
+/**
+ * Mark a provider:model key tripped. Subsequent `isModelTripped(key)` calls
+ * return true until the TTL expires. If the key is already tripped, the
+ * expiry is extended only if the new TTL would push it later (we never
+ * shorten an existing trip).
+ */
+export function tripModel(
+  key: string,
+  reason: string,
+  ttlMs: number = DAILY_TRIP_TTL_MS,
+): void {
+  const newExpiry = Date.now() + ttlMs;
+  const existing = TRIPPED_MODELS.get(key) ?? 0;
+  TRIPPED_MODELS.set(key, Math.max(existing, newExpiry));
+  const seconds = Math.round(ttlMs / 1000);
   console.warn(
-    `[retry] circuit breaker — ${model} marked exhausted for the next hour (${reason}). Falling back without further API calls.`,
+    `[retry] circuit breaker — ${key} marked exhausted for ~${seconds}s (${reason}).`,
   );
 }
 
-/** Reset the daily-quota circuit breaker. Mostly for tests / cron. */
+/** Reset the circuit breaker. Mostly for tests. */
 export function resetQuotaCircuitBreaker(): void {
   TRIPPED_MODELS.clear();
 }

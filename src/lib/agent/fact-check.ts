@@ -12,7 +12,7 @@
  * of the pipeline.
  */
 
-import { generateWithRetry, getModel, parseJson } from "./llm";
+import { generateText, parseJson } from "./llm";
 import { mapConcurrent } from "./retry";
 import type {
   Candidate,
@@ -40,7 +40,6 @@ async function checkConsistency(
   };
 
   try {
-    const model = getModel("fact_check");
     const prompt = `
 Analyse this resume for internal inconsistencies or suspicious claims.
 
@@ -66,8 +65,8 @@ RESUME:
 ${candidate.raw_resume}
 `.trim();
 
-    const result = await generateWithRetry(model, prompt, `fact-check:${candidate.name}`);
-    const parsed = parseJson<RawConsistencyResult>(result.response.text());
+    const text = await generateText("fact_check", prompt, `fact-check:${candidate.name}`);
+    const parsed = parseJson<RawConsistencyResult>(text);
 
     return {
       overallVeracity: parsed.overall_veracity ?? "medium",
